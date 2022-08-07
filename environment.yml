@@ -1,0 +1,51 @@
+# Dev Environment
+name: cirrhosis_death
+channels:
+  - defaults
+  - pytorch
+  - fastai
+  - plotly
+  - conda-forge
+  - bioconda
+dependencies:
+  - python
+  - numpy
+  - pandas
+  - pandas-profiling
+  - scipy
+  # plotting
+  - matplotlib
+  # - python-kaleido
+  - plotly
+  - seaborn
+  - pip
+  # ML
+  - scikit-learn
+  # other
+  - tqdm # progress bars
+  - xmltodict # configs
+  - openpyxl # xml
+  - omegaconf
+  - hydra-core
+  # snakemake
+  - snakemake-minimal>=6.0.0
+  # jupyter
+  - ipykernel
+  - ipython
+  - ipywidgets
+  - jupytext
+  - jupyterlab # standalone jupyter installation
+  - jupyterlab_code_formatter
+  - jupyterlab-git
+  - jupyter-dash
+  - papermill # execute ipynb's
+  # survival analysis
+  - lifelines
+  - statsmodels
+  # dev
+  - pytest
+  - pytest-cov
+  - jupytext
+  - yapf # code formatting
+  - pip:
+    - -e .
