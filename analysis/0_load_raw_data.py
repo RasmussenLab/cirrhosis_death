@@ -28,14 +28,18 @@ import src
 
 import config
 
+
+pd.options.display.max_columns = 100
+
 # +
 DATA_FOLDER = Path(config.data)
+DATA_PROCESSED = Path(config.data_processed)
 list(DATA_FOLDER.iterdir())
 
-TODAY = '2022-08-05'
+config.STUDY_ENDDATE
 # -
 
-DATA_CLINIC = DATA_FOLDER / '2022-08-04_clinical_data.xlsx'
+DATA_CLINIC = DATA_FOLDER / '2022-08-08_clinical_data.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 
 clinic = pd.read_excel(DATA_CLINIC)
@@ -64,53 +68,55 @@ olink.index.difference(clinic.index)
 import yaml
 
 with open('config/olink_features.yaml', 'w') as f:
-    yaml.dump({k: '' for k in olink.columns.to_list()}, f)
-
-# clinic.dtypes.to_dict()
+    yaml.dump({k: '' for k in olink.columns.to_list()}, f, sort_keys=False)
 
 with open('config/clinic_features.yaml', 'w') as f:
-    yaml.dump({k: '' for k in clinic.columns.to_list()}, f)
+    yaml.dump({k: '' for k in clinic.columns.to_list()}, f, sort_keys=False)
+    
+olink.columns.to_series().to_excel('config/olink_features.xlsx')
+clinic.columns.to_series().to_excel('config/clinic_features.xlsx')    
 # -
 
 # ## Subselect
 
+# +
 clinic = clinic.loc[idx_overlap]
 olink = olink.loc[idx_overlap]
+
+clinic['dead'] = (clinic['DateDeath'] - clinic['DateDiagnose']).notna()
+clinic["DateDeath"] = clinic["DateDeath"].fillna(value=config.STUDY_ENDDATE)
+# -
 
 # ## Deaths over time
 #
 # - one plot with absolute time axis
 # - one plot relative to diagnosis date
 
-kp_data = clinic[['DateDiagnose', 'DateDeath']].copy()
-kp_data['dead'] = (clinic['DateDeath'] - clinic['DateDiagnose']).notna()
-kp_data["DateDeath"] = kp_data["DateDeath"].fillna(value=TODAY)
-kp_data
 
-kp_data.describe(datetime_is_numeric=True, include='all')
+clinic.describe(datetime_is_numeric=True, include='all')
 
 # +
 din_a4 = (8.27 * 2, 11.69 * 2)
 fig, ax = plt.subplots(figsize=din_a4)
 
-src.plotting.plot_lifelines(kp_data.sort_values('DateDiagnose'), ax=ax)
+src.plotting.plot_lifelines(clinic.sort_values('DateDiagnose'), ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 # -
 
-ax = kp_data.astype({
+ax = clinic.astype({
     'dead': 'category'
 }).plot.scatter(x="DateDiagnose", y="dead", c='blue', rot=45)
 
-ax = kp_data.astype({
+ax = clinic.astype({
     'dead': 'category'
 }).plot.scatter(x="DateDiagnose",
                 y='DateDeath',
                 c="dead",
                 rot=45,
                 sharex=False)
-min_date, max_date = kp_data["DateDiagnose"].min(
-), kp_data["DateDiagnose"].max()
+min_date, max_date = clinic["DateDiagnose"].min(
+), clinic["DateDiagnose"].max()
 ax.plot([min_date, max_date], [min_date, max_date], 'k-', lw=2)
 fig = ax.get_figure()
 
@@ -125,3 +131,11 @@ fig = ax.get_figure()
 
 # kmf.fit(T, event_observed=C)
 # -
+
+# ## Dumped processed and selected data
+
+# +
+DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
+
+clinic.to_pickle(config.fname_pkl_clinic)
+olink.to_pickle(config.fname_pkl_olink)
