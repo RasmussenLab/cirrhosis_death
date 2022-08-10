@@ -16,18 +16,27 @@
 # # Raw Data
 #
 # - join OLink and clinical data
-# -
+# - create targets: 
+#     
+#   event | next 90 days | next 180 days
+#   --- | --- | ---
+#   death | `dead_90` | `dead_180`
+#   admission to hospital | `adm_90`  | `adm_180`
+#     
+#   all cases within 90 days will be included into the 180 days
 
 # +
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
+
+from lifelines import KaplanMeierFitter
 
 import src
 
 import config
-
 
 pd.options.display.max_columns = 100
 
@@ -72,9 +81,9 @@ with open('config/olink_features.yaml', 'w') as f:
 
 with open('config/clinic_features.yaml', 'w') as f:
     yaml.dump({k: '' for k in clinic.columns.to_list()}, f, sort_keys=False)
-    
+
 olink.columns.to_series().to_excel('config/olink_features.xlsx')
-clinic.columns.to_series().to_excel('config/clinic_features.xlsx')    
+clinic.columns.to_series().to_excel('config/clinic_features.xlsx')
 # -
 
 # ## Subselect
@@ -104,33 +113,143 @@ _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 # -
 
-ax = clinic.astype({
+clinic.dead
+
+# +
+fig, axes = plt.subplots(2, sharex=True)
+ax =  axes[0]
+ax.set_yticks([])
+
+ax = clinic.loc[clinic.dead].astype({
     'dead': 'category'
-}).plot.scatter(x="DateDiagnose", y="dead", c='blue', rot=45)
+}).plot.scatter(x="DateDiagnose", y="dead", c='blue', rot=45, ax=ax, ylabel='dead')
+ax =  axes[1]
+# ax.axes.yaxis.set_visible(False)
+ax.set_yticks([])
+ax = clinic.loc[~clinic.dead].astype({
+    'dead': 'category'
+}).plot.scatter(x="DateDiagnose", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
+_ = fig.suptitle("Diagnose date by survival status", fontsize=22)
+# -
 
 ax = clinic.astype({
     'dead': 'category'
-}).plot.scatter(x="DateDiagnose",
-                y='DateDeath',
-                c="dead",
-                rot=45,
-                sharex=False)
-min_date, max_date = clinic["DateDiagnose"].min(
-), clinic["DateDiagnose"].max()
+}).plot.scatter(x="DateDiagnose", y='DateDeath', c="dead", rot=45, sharex=False)
+min_date, max_date = clinic["DateDiagnose"].min(), clinic["DateDiagnose"].max()
 ax.plot([min_date, max_date], [min_date, max_date], 'k-', lw=2)
 fig = ax.get_figure()
 
-# ## Kaplan-Meier survival plot
+# ## Cleanup steps
+
+# fill missing Admissions with zero, and make it an integer
+clinic["Admissions"] = clinic["Admissions"].fillna(0).astype(int)
+
+# ## Targets
+#
+# - death only has right censoring, no drop-out
+# - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
 
 # +
-# from lifelines import KaplanMeierFitter
-# kmf = KaplanMeierFitter()
+clinic["TimeToAdmFromDiagnose"] = (
+    clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
+    clinic["DateDiagnose"]).dt.days
+clinic["TimeToDeathFromDiagnose"] = (
+    clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
+    clinic["DateDiagnose"]).dt.days
 
-# T = kp_plot['DateDeath']
-# C = kp_plot['dead']
-
-# kmf.fit(T, event_observed=C)
+mask = clinic["TimeToDeathFromDiagnose"] < clinic["TimeToAdmFromDiagnose"]
+cols_view = [
+    "TimeToDeathFromDiagnose", "TimeToAdmFromDiagnose", "dead", "Admissions"
+]
+clinic[cols_view].loc[mask]
 # -
+
+# For these individuals, the diagnose time is censored as the persons died before.
+
+clinic.loc[mask,
+           "TimeToAdmFromDiagnose"] = clinic.loc[mask,
+                                                 "TimeToDeathFromDiagnose"]
+clinic.loc[mask, cols_view]
+
+# ### Kaplan-Meier survival plot 
+
+# +
+kmf = KaplanMeierFitter()
+kmf.fit(clinic["TimeToDeathFromDiagnose"], event_observed=clinic["dead"])
+
+y_lim = (0, 1)
+ax = kmf.plot(title='Kaplan Meier survival curve since diagnose',
+              xlim=(0, None),
+              ylim=(0, 1),
+              xlabel='Time since diagnose',
+              ylabel='survival rate',
+              legend=False)
+_ = ax.vlines(90, *y_lim)
+_ = ax.vlines(180, *y_lim)
+# -
+
+_ = sns.catplot(x="TimeToDeathFromDiagnose",
+                y="dead",
+                hue="DiagnosisPlace",
+                data=clinic.astype({'dead': 'category'}),
+                height=4,
+                aspect=4
+               )
+ax = _.fig.get_axes()[0]
+ylim = ax.get_ylim()
+ax.vlines(90, *ylim)
+ax.vlines(180, *ylim)
+
+# ### KP plot admissions
+
+# +
+kmf = KaplanMeierFitter()
+kmf.fit(clinic["TimeToAdmFromDiagnose"], event_observed=clinic['Admissions'])
+
+y_lim = (0, 1)
+ax = kmf.plot(title='Kaplan Meier curve for admissions',
+              xlim=(0, None),
+              ylim=(0, 1),
+              xlabel='Time since diagnose',
+              ylabel='non-admission rate',
+              legend=False)
+_ = ax.vlines(90, *y_lim)
+_ = ax.vlines(180, *y_lim)
+# -
+
+# ### Build targets
+
+# +
+targets = {}
+
+for cutoff in [90, 180]:
+    targets[f'dead_{cutoff}'] = (clinic["TimeToDeath"] <= cutoff).astype(int)
+    targets[f'adm_{cutoff}'] = (clinic["TimeToAdmFromDiagnose"] <=
+                                cutoff).astype(int)
+targets = pd.DataFrame(targets)
+targets = targets.sort_index(axis=1, ascending=False)
+targets.head()
+
+# +
+from src.pandas import combine_value_counts
+
+combine_value_counts(targets)
+
+# +
+ret = []
+for var in targets.columns:
+    _ = pd.crosstab(targets[var], clinic.DiagnosisPlace)
+    _.index = [f'{var.replace("_", " <= ")} - {i}' for i in _.index]
+    ret.append(_)
+ret = pd.concat(ret)
+
+tab_targets_by_diagnosisPlace = ret
+tab_targets_by_diagnosisPlace
+# -
+
+# add to clinical targets
+
+clinic = clinic.join(targets)
 
 # ## Dumped processed and selected data
 
@@ -139,3 +258,7 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 
 clinic.to_pickle(config.fname_pkl_clinic)
 olink.to_pickle(config.fname_pkl_olink)
+targets.to_pickle(config.fname_pkl_targets)
+# -
+
+
