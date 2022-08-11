@@ -20,11 +20,18 @@
 import numpy as np
 import pandas as pd
 
+import pingouin as pg
+
+import src.stats
+from src.stats import means_between_groups
+
 import config
 
-pd.options.display.max_columns = 100
-pd.options.display.max_rows = 100
-pd.options.display.min_rows = 50
+# %% [markdown]
+# ## Set parameters
+
+# %%
+TARGET = 'dead_90'
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)
@@ -48,3 +55,44 @@ dead_wo_adm = clinic["DateFirstAdmission"].isna() & clinic['dead']
 idx_dead_wo_adm = dead_wo_adm.loc[dead_wo_adm].index
 print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index)
 clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateDiagnose", "Admissions"]]
+
+# %% [markdown]
+# ## Differences between groups defined by target
+
+# %%
+clinic
+
+# %%
+happend = clinic[TARGET].astype(bool)
+
+# %%
+var = 'Age'
+# import scipy.stats 
+# scipy.stats.ttest_ind(clinic.loc[happend, var], clinic.loc[~happend, var], equal_var=False) # same results as pengoin
+pg.ttest(clinic.loc[happend, var], clinic.loc[~happend, var])
+
+# %%
+
+
+group_diffs = means_between_groups(clinic, happend, event_names=('died', 'alive'))
+group_diffs
+
+
+# %%
+def calc_stats(df:pd.DataFrame, boolean_array:pd.Series, vars:list[str]):
+    ret = []
+    for var in vars:
+        _ = pg.ttest(df.loc[boolean_array, var], df.loc[~boolean_array, var])
+        ret.append(_)
+    ret = pd.concat(ret)
+    ret = ret.set_index(group_diffs.index)
+    ret.columns.name = 'ttest'
+    ret.columns = pd.MultiIndex.from_product([['ttest'], ret.columns], names=('test', 'var'))
+    return ret
+
+ttests = calc_stats(clinic, happend, group_diffs.index)
+
+ttests
+
+# %%
+group_diffs.join(ttests.loc[:, pd.IndexSlice[:,["alternative", "p-val", "cohen-d"]]])

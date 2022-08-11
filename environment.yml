@@ -15,12 +15,12 @@ dependencies:
   - scipy
   # plotting
   - matplotlib
-  # - python-kaleido
   - plotly
   - seaborn
   - pip
-  # ML
+  # ML, stats
   - scikit-learn
+  - pingouin
   # other
   - tqdm # progress bars
   - xmltodict # configs

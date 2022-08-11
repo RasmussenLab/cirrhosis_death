@@ -1,3 +1,5 @@
+import config.pandas
+
 from pathlib import Path
 
 STUDY_ENDDATE:str = '2022-08-08'
