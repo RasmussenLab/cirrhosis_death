@@ -23,7 +23,7 @@ import pandas as pd
 import pingouin as pg
 
 import src.stats
-from src.stats import means_between_groups
+from src.sklearn import run_pca, StandardScaler
 
 import config
 
@@ -72,27 +72,119 @@ var = 'Age'
 pg.ttest(clinic.loc[happend, var], clinic.loc[~happend, var])
 
 # %%
+vars_cont = [
+    'Age', 'IgM', 'IgG', 'IgA', 'Hgb', 'Leucocytes', 'Platelets', 'Bilirubin',
+    'Albumin', 'CRP', 'pp', 'INR', 'ALAT', 'TimeToDeath',
+    'TimeToAdmFromDiagnose', 'TimeToAdmFromSample', 'Admissions', 'MELD-score',
+    'MELD-Na', 'ChildPugh', 'TimeToDeathFromDiagnose'
+]
+ana_differential = src.stats.diff_analysis(
+    clinic[vars_cont],
+    happend,
+    event_names=('died', 'alive'),
+)
+ana_differential.sort_values(('ttest', 'p-val'))
 
-
-group_diffs = means_between_groups(clinic, happend, event_names=('died', 'alive'))
-group_diffs
-
-
-# %%
-def calc_stats(df:pd.DataFrame, boolean_array:pd.Series, vars:list[str]):
-    ret = []
-    for var in vars:
-        _ = pg.ttest(df.loc[boolean_array, var], df.loc[~boolean_array, var])
-        ret.append(_)
-    ret = pd.concat(ret)
-    ret = ret.set_index(group_diffs.index)
-    ret.columns.name = 'ttest'
-    ret.columns = pd.MultiIndex.from_product([['ttest'], ret.columns], names=('test', 'var'))
-    return ret
-
-ttests = calc_stats(clinic, happend, group_diffs.index)
-
-ttests
+# %% [markdown]
+# ## Olink
 
 # %%
-group_diffs.join(ttests.loc[:, pd.IndexSlice[:,["alternative", "p-val", "cohen-d"]]])
+olink.loc[:, olink.isna().any()].describe()
+
+# %%
+ana_diff_olink = src.stats.diff_analysis(olink, happend, event_names=('died', 'alive'))
+ana_diff_olink.sort_values(('ttest', 'p-val'))
+
+
+# %% [markdown]
+# ## PCA 
+
+# %% [markdown]
+# ### Missing values handling
+
+# %%
+def info_missing(df):
+    N, M = olink.shape
+    msg = "{} missing features out of {} measurments, corresponding to {:.3f}%"
+    msg = msg.format(df.isna().sum().sum(), N * M,
+                     df.isna().sum().sum() / (N * M) * 100)
+    print(msg)
+    return msg
+
+_ = info_missing(olink)
+
+# %% [markdown]
+# ### PCA on scaled data 
+#
+# - missing values set to zero
+
+# %%
+olink_scaled = StandardScaler().fit_transform(olink).fillna(0)
+
+PCs, pca = run_pca(olink_scaled, n_components=None)
+PCs
+
+# %%
+olink.columns[np.argmax(np.abs(pca.components_[:,0]))] # eigenvector first PCa, absolut arg max -> variable
+
+# %%
+exp_var_olink = pd.Series(pca.explained_variance_ratio_).to_frame('explained variance')
+exp_var_olink["explained variance (cummulated)"] = exp_var_olink['explained variance'].cumsum()
+exp_var_olink.index.name = 'PC'
+ax = exp_var_olink.plot()
+
+# %% [markdown]
+# ### Logistic Regression
+
+# %%
+import sklearn
+from sklearn.metrics import auc, precision_recall_curve, roc_curve
+
+from src.sklearn.scoring import ConfusionMatrix
+
+y_true = clinic[TARGET]
+X = PCs.iloc[:,:5]
+y_true.value_counts()
+
+# %% [markdown]
+# #### With weights
+
+# %%
+weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y_true)
+
+log_reg = sklearn.linear_model.LogisticRegression()
+log_reg = log_reg.fit(X=X, y=y_true, sample_weight=weights)
+
+# %% [markdown]
+# Accuracy absolute -> imbalanced data leads to easy prediciton
+
+# %%
+scores = dict(ref_score=(y_true.value_counts() / len(clinic)).max(),
+              model_score=log_reg.score(X, y_true, sample_weight=None))
+
+scores
+
+# %%
+y_pred = log_reg.predict(X)
+
+ConfusionMatrix(y_true, y_pred).as_dataframe
+
+# %% [markdown]
+# #### Without weights, but adapting cutoff
+
+# %%
+log_reg = log_reg.fit(X=X, y=y_true, sample_weight=None)
+
+y_prob = log_reg.predict_proba(X)[:,1]
+y_pred = pd.Series((y_prob > 0.23), index=PCs.index).astype(int)
+
+ConfusionMatrix(y_true, y_pred).as_dataframe # this needs to be augmented with information if patient died by now (to see who is "wrongly classified)")
+
+# %%
+fpr, tpr, cutoffs = roc_curve(y_true, y_prob)
+roc = pd.DataFrame([fpr, tpr, cutoffs[::-1]], index='fpr tpr cutoffs'.split())
+
+# %%
+ax = roc.T.plot('fpr', 'tpr')
+
+# %%
