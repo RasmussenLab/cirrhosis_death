@@ -141,8 +141,75 @@ fig = ax.get_figure()
 
 # ## Cleanup steps
 
+# ### Clinic
+#
+# - [x] encode binary variables (yes, no) as `category`s 
+#   > Be aware that this might cause unexpected behaviour!
+
+# Fill derived variables with missing measurements
+
 # fill missing Admissions with zero, and make it an integer
 clinic["Admissions"] = clinic["Admissions"].fillna(0).astype(int)
+
+# Encode binary variables
+
+# binary variables
+vars_binary = [
+    'Sex',
+    'EtiAlco',
+    'EtiFat',
+    'EtiHBV',
+    'EtiHCV',
+    'EtiPBC',
+    'EtiAIH',
+    'EtiMTX',
+    'EtiOther',
+    'EtiUnknown',
+    'DecomensatedAtDiagnosis',
+    'Ascites',
+    'EsoBleeding',
+    'HRS',
+    'HE',
+    'Icterus',
+    'Heartdisease',
+    'Hypertension',
+    'HighCholesterol',
+    'Cancer',
+    'Depression',
+    'Psychiatric',
+    'Diabetes',
+    'IschemicHeart',
+    'HeartFailure',
+    'Arrythmia',
+    'OtherHeart',
+    'TypeDiabetes',
+    'InsulinDependent',
+    # 'OtherComorb',
+    'Statins'
+]
+clinic[vars_binary].head()
+# clinic.columns.to_list()
+
+clinic[vars_binary] = clinic[vars_binary].astype('category')
+
+# ### Olink
+#
+# - [x] remove additional meta data
+# - [x] highlight missing values
+#
+
+# 
+olink.head()
+
+# Remove additional metadata
+
+olink = olink.loc[:,'IL8':]
+
+# Which measurments have missing values
+#
+# - [ ] Imputation due to limit of detection (LOD) -> how to best impute
+
+olink.loc[:, olink.isna().any()].describe() 
 
 # ## Targets
 #
@@ -193,8 +260,7 @@ _ = sns.catplot(x="TimeToDeathFromDiagnose",
                 hue="DiagnosisPlace",
                 data=clinic.astype({'dead': 'category'}),
                 height=4,
-                aspect=4
-               )
+                aspect=3)
 ax = _.fig.get_axes()[0]
 ylim = ax.get_ylim()
 ax.vlines(90, *ylim)
