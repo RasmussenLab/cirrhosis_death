@@ -154,39 +154,7 @@ clinic["Admissions"] = clinic["Admissions"].fillna(0).astype(int)
 # Encode binary variables
 
 # binary variables
-vars_binary = [
-    'Sex',
-    'EtiAlco',
-    'EtiFat',
-    'EtiHBV',
-    'EtiHCV',
-    'EtiPBC',
-    'EtiAIH',
-    'EtiMTX',
-    'EtiOther',
-    'EtiUnknown',
-    'DecomensatedAtDiagnosis',
-    'Ascites',
-    'EsoBleeding',
-    'HRS',
-    'HE',
-    'Icterus',
-    'Heartdisease',
-    'Hypertension',
-    'HighCholesterol',
-    'Cancer',
-    'Depression',
-    'Psychiatric',
-    'Diabetes',
-    'IschemicHeart',
-    'HeartFailure',
-    'Arrythmia',
-    'OtherHeart',
-    'TypeDiabetes',
-    'InsulinDependent',
-    # 'OtherComorb',
-    'Statins'
-]
+vars_binary = config.clinic_data.vars_binary
 clinic[vars_binary].head()
 # clinic.columns.to_list()
 
@@ -325,6 +293,3 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 clinic.to_pickle(config.fname_pkl_clinic)
 olink.to_pickle(config.fname_pkl_olink)
 targets.to_pickle(config.fname_pkl_targets)
-# -
-
-

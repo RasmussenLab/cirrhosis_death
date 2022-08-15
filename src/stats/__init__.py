@@ -1,1 +1,1 @@
-from src.stats.groups_comparision import diff_analysis
+from src.stats.groups_comparision import diff_analysis, binomtest

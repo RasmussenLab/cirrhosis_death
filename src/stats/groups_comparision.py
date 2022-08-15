@@ -1,5 +1,10 @@
+import logging
 import pandas as pd
 import pingouin as pg
+
+from scipy.stats import binomtest as scipy_binomtest
+
+logger = logging.getLogger(__name__)
 
 
 def means_between_groups(
@@ -46,3 +51,38 @@ def diff_analysis(
     ttests = calc_stats(df, boolean_array=boolean_array, vars=ret.index)
     ret = ret.join(ttests.loc[:, pd.IndexSlice[:, ttest_vars]])
     return ret
+
+
+def binomtest(var: pd.Series,
+              boolean_array: pd.Series,
+              alternative='two-sided') -> pd.DataFrame:
+    entry = {}
+    entry['variable'] = var.name
+
+    assert len(
+        var.cat.categories
+    ) == 2, f"No binary variable, found {len(var.cat.categories)} categories: {list(var.cat.categories)}"
+
+    p_1 = var.loc[boolean_array].dropna().cat.codes.mean()
+
+    p_0 = var.loc[~boolean_array].dropna().cat.codes.mean()
+    entry[var.cat.categories[0]] = dict(
+        count=var.loc[~boolean_array].value_counts().sum(), p=p_0)
+    logger.debug(f"p cat==0: {p_0}, p cat==1: {p_1}")
+
+    cat_at_pos_one = var.cat.categories[1]
+    logger.debug('Category with code 1', cat_at_pos_one)
+
+    counts = var.loc[boolean_array].value_counts()
+    k, n = counts.loc[cat_at_pos_one], counts.sum()
+
+    entry[var.cat.categories[1]] = dict(count=n, p=p_1)
+
+    test_res = scipy_binomtest(k, n, p_0, alternative=alternative)
+    test_res = pd.Series(test_res.__dict__).to_frame('binomial test').unstack()
+    test_res.name = entry['variable']
+    test_res = test_res.to_frame().T
+
+    entry = pd.DataFrame(entry).set_index('variable', append=True).unstack(0)
+    entry = entry.join(test_res)
+    return entry

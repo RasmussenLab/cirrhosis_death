@@ -65,6 +65,9 @@ clinic
 # %%
 happend = clinic[TARGET].astype(bool)
 
+# %% [markdown]
+# ### Continous
+
 # %%
 var = 'Age'
 # import scipy.stats 
@@ -72,18 +75,25 @@ var = 'Age'
 pg.ttest(clinic.loc[happend, var], clinic.loc[~happend, var])
 
 # %%
-vars_cont = [
-    'Age', 'IgM', 'IgG', 'IgA', 'Hgb', 'Leucocytes', 'Platelets', 'Bilirubin',
-    'Albumin', 'CRP', 'pp', 'INR', 'ALAT', 'TimeToDeath',
-    'TimeToAdmFromDiagnose', 'TimeToAdmFromSample', 'Admissions', 'MELD-score',
-    'MELD-Na', 'ChildPugh', 'TimeToDeathFromDiagnose'
-]
+vars_cont = config.clinic_data.vars_cont
 ana_differential = src.stats.diff_analysis(
     clinic[vars_cont],
     happend,
     event_names=('died', 'alive'),
 )
 ana_differential.sort_values(('ttest', 'p-val'))
+
+# %% [markdown]
+# ### Binary
+
+# %%
+clinic[config.clinic_data.vars_binary].describe()
+
+# %%
+diff_binomial = []
+for var in config.clinic_data.vars_binary[1:]:
+      diff_binomial.append(src.stats.binomtest(clinic[var], happend))
+pd.concat(diff_binomial).sort_values(('binomial test', 'pvalue'))
 
 # %% [markdown]
 # ## Olink
@@ -186,5 +196,3 @@ roc = pd.DataFrame([fpr, tpr, cutoffs[::-1]], index='fpr tpr cutoffs'.split())
 
 # %%
 ax = roc.T.plot('fpr', 'tpr')
-
-# %%
