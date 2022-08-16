@@ -22,3 +22,10 @@ pd.options.display.float_format = '{:,.3f}'.format
 pf.IntArrayFormatter = IntArrayFormatter
 
 plotting.make_large_descriptors()
+
+
+# Load config
+# from hydra import initialize_config_module, compose
+# with initialize_config_module(version_base=None, config_module="config"):
+#     cfg = compose('config')
+#     print(cfg)

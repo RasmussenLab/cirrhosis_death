@@ -1,0 +1,33 @@
+binary: 
+- Sex
+- EtiAlco
+- EtiFat
+- EtiHBV
+- EtiHCV
+- EtiPBC
+- EtiAIH
+- EtiMTX
+- EtiOther
+- EtiUnknown
+- DecomensatedAtDiagnosis
+- Ascites
+- EsoBleeding
+- HRS
+- HE
+- Icterus
+- Heartdisease
+- Hypertension
+- HighCholesterol
+- Cancer
+- Depression
+- Psychiatric
+- Diabetes
+- IschemicHeart
+- HeartFailure
+- Arrythmia
+- OtherHeart
+- TypeDiabetes
+- InsulinDependent
+- Statins
+cont:
+  - blub

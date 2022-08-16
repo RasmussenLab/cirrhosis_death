@@ -53,11 +53,13 @@ DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 
 clinic = pd.read_excel(DATA_CLINIC)
 clinic.SampleID = clinic.SampleID.str.replace(' ', '')
+cols_clinic = src.pandas.get_colums_accessor(clinic)
 clinic = clinic.set_index('SampleID').sort_index()
 clinic
 
 olink = pd.read_table(DATA_OLINK)
 olink = olink.set_index(olink.SampleID.str[4:]).sort_index()
+cols_olink = src.pandas.get_colums_accessor(olink)
 olink
 
 # ## Different overlaps
@@ -206,6 +208,25 @@ clinic.loc[mask,
                                                  "TimeToDeathFromDiagnose"]
 clinic.loc[mask, cols_view]
 
+# +
+clinic["TimeToAdmFromInflSample"] = (
+    clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
+    clinic["DateInflSample"]).dt.days
+clinic["TimeToDeathFromInfl"] = (
+    clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
+    clinic["DateInflSample"]).dt.days
+
+cols_clinic = src.pandas.get_colums_accessor(clinic)
+
+cols_view = [
+    "TimeToDeathFromDiagnose", cols_clinic.TimeToDeathFromInfl, "TimeToAdmFromDiagnose", cols_clinic.TimeToAdmFromInflSample, "dead", "Admissions"
+]
+mask = (clinic[cols_view] < 0).any(axis=1)
+clinic[cols_view].loc[mask]
+# -
+
+clinic[cols_view].describe()
+
 # ### Kaplan-Meier survival plot 
 
 # +
@@ -257,12 +278,14 @@ _ = ax.vlines(180, *y_lim)
 targets = {}
 
 for cutoff in [90, 180]:
-    targets[f'dead_{cutoff}'] = (clinic["TimeToDeath"] <= cutoff).astype(int)
+    targets[f'dead_{cutoff}'] = (clinic["TimeToDeathFromDiagnose"] <= cutoff).astype(int)
     targets[f'adm_{cutoff}'] = (clinic["TimeToAdmFromDiagnose"] <=
                                 cutoff).astype(int)
+    targets[f'dead_wi_{cutoff}_f_infl_sample'] = (clinic["TimeToDeathFromInfl"] <= cutoff).astype(int)
+    targets[f'adm_wi_{cutoff}_f_infl_sample'] = (clinic["TimeToAdmFromInflSample"] <= cutoff).astype(int)
 targets = pd.DataFrame(targets)
 targets = targets.sort_index(axis=1, ascending=False)
-targets.head()
+targets.describe()
 
 # +
 from src.pandas import combine_value_counts
