@@ -31,7 +31,7 @@ import config
 # ## Set parameters
 
 # %%
-TARGET = 'dead_90'
+TARGET = 'dead_wi_90_f_infl_sample'
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)
@@ -63,6 +63,12 @@ clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateDiagnose", "Admissions"]]
 clinic
 
 # %%
+clinic[TARGET].value_counts()
+
+# %%
+pd.crosstab(clinic[TARGET], clinic["DecomensatedAtDiagnosis"])
+
+# %%
 happend = clinic[TARGET].astype(bool)
 
 # %% [markdown]
@@ -88,6 +94,13 @@ ana_differential.sort_values(('ttest', 'p-val'))
 
 # %%
 clinic[config.clinic_data.vars_binary].describe()
+
+# %% [markdown]
+# Might focus on discriminative power of
+#   - DecompensatedAtDiagnosis 
+#   - alcohol consumption
+#   
+# but the more accute diseases as heart disease and cancer seem to be distinctive
 
 # %%
 diff_binomial = []
@@ -165,9 +178,6 @@ weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y_true)
 log_reg = sklearn.linear_model.LogisticRegression()
 log_reg = log_reg.fit(X=X, y=y_true, sample_weight=weights)
 
-# %% [markdown]
-# Accuracy absolute -> imbalanced data leads to easy prediciton
-
 # %%
 scores = dict(ref_score=(y_true.value_counts() / len(clinic)).max(),
               model_score=log_reg.score(X, y_true, sample_weight=None))
@@ -179,6 +189,21 @@ y_pred = log_reg.predict(X)
 
 ConfusionMatrix(y_true, y_pred).as_dataframe
 
+# %%
+pivot = y_true.to_frame()
+pivot['pred'] = y_pred
+pivot = pivot.join(clinic.dead.astype(int))
+pivot.describe().iloc[:2]
+
+# %%
+pd.pivot_table(pivot, values='pred', index=TARGET, columns='dead', aggfunc='sum')
+
+# %%
+pd.pivot_table(pivot, values='dead', index=TARGET, columns='pred', aggfunc='sum')
+
+# %%
+pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
+
 # %% [markdown]
 # #### Without weights, but adapting cutoff
 
@@ -186,13 +211,32 @@ ConfusionMatrix(y_true, y_pred).as_dataframe
 log_reg = log_reg.fit(X=X, y=y_true, sample_weight=None)
 
 y_prob = log_reg.predict_proba(X)[:,1]
-y_pred = pd.Series((y_prob > 0.23), index=PCs.index).astype(int)
+y_pred = pd.Series((y_prob > 0.21), index=PCs.index).astype(int)
 
 ConfusionMatrix(y_true, y_pred).as_dataframe # this needs to be augmented with information if patient died by now (to see who is "wrongly classified)")
 
 # %%
-fpr, tpr, cutoffs = roc_curve(y_true, y_prob)
-roc = pd.DataFrame([fpr, tpr, cutoffs[::-1]], index='fpr tpr cutoffs'.split())
+pivot = y_pred.to_frame('pred').join(y_true).join(clinic.dead.astype(int))
+pivot.describe().iloc[:2]
+
+# %% [markdown]
+# How many will die for those who have been predicted to die?
 
 # %%
+pd.pivot_table(pivot, values='pred', index=TARGET, columns='dead', aggfunc='sum')
+
+# %%
+pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
+
+# %%
+fpr, tpr, cutoffs = roc_curve(y_true, y_prob)
+roc = pd.DataFrame([fpr, tpr, cutoffs[::-1]], index='fpr tpr cutoffs'.split())
 ax = roc.T.plot('fpr', 'tpr')
+
+# %%
+precision, recall, cutoffs = precision_recall_curve(y_true, y_prob)
+prc = pd.DataFrame([precision, recall, cutoffs[::-1]], index='precision recall cutoffs'.split())
+prc
+
+# %%
+ax = prc.T.plot('recall', 'precision', ylabel='precision')
