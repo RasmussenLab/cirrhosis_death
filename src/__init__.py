@@ -4,6 +4,7 @@ from logging import NullHandler
 
 logging.getLogger(__name__).addHandler(NullHandler())
 import src.plotting
+import src.pandas
 from .plotting import savefig
 
 # put into some pandas_cfg.py file and import all
