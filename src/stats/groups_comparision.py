@@ -66,7 +66,7 @@ def binomtest(var: pd.Series,
     p_1 = var.loc[boolean_array].dropna().cat.codes.mean()
 
     p_0 = var.loc[~boolean_array].dropna().cat.codes.mean()
-    entry[var.cat.categories[0]] = dict(
+    entry['no-event'] = dict(
         count=var.loc[~boolean_array].value_counts().sum(), p=p_0)
     logger.debug(f"p cat==0: {p_0}, p cat==1: {p_1}")
 
@@ -76,7 +76,7 @@ def binomtest(var: pd.Series,
     counts = var.loc[boolean_array].value_counts()
     k, n = counts.loc[cat_at_pos_one], counts.sum()
 
-    entry[var.cat.categories[1]] = dict(count=n, p=p_1)
+    entry['event'] = dict(count=n, p=p_1)
 
     test_res = scipy_binomtest(k, n, p_0, alternative=alternative)
     test_res = pd.Series(test_res.__dict__).to_frame('binomial test').unstack()
