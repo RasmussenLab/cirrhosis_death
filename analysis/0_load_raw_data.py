@@ -30,6 +30,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from pandas_profiling import ProfileReport
 import seaborn as sns
 
 from lifelines import KaplanMeierFitter
@@ -37,8 +38,6 @@ from lifelines import KaplanMeierFitter
 import src
 
 import config
-
-pd.options.display.max_columns = 100
 
 # +
 DATA_FOLDER = Path(config.data)
@@ -57,10 +56,25 @@ cols_clinic = src.pandas.get_colums_accessor(clinic)
 clinic = clinic.set_index('SampleID').sort_index()
 clinic
 
+
+# +
+def dump_report(df, fpath, **kwargs):
+    profile = ProfileReport(df, **kwargs)
+    profile.to_file(fpath)
+    
+# dump_report(clinic, Path(config.folder_reports) / 'eda_clinic_all.html' )
+
+
+# -
+
 olink = pd.read_table(DATA_OLINK)
 olink = olink.set_index(olink.SampleID.str[4:]).sort_index()
 cols_olink = src.pandas.get_colums_accessor(olink)
 olink
+
+# +
+# dump_report(olink.loc[:,'IL8':], Path(config.folder_reports) / 'eda_olink_all.html' )
+# -
 
 # ## Different overlaps
 
@@ -162,13 +176,22 @@ clinic[vars_binary].head()
 
 clinic[vars_binary] = clinic[vars_binary].astype('category')
 
+# remaining non numeric variables
+
+clinic.loc[:,clinic.dtypes == 'object'].describe()
+
+clinic = clinic.join(
+    pd.get_dummies(clinic["DiagnosisPlace"]).replace({
+        0: 'No',
+        1: 'Yes'
+    }).astype('category'))
+
 # ### Olink
 #
 # - [x] remove additional meta data
 # - [x] highlight missing values
 #
 
-# 
 olink.head()
 
 # Remove additional metadata
@@ -296,7 +319,7 @@ combine_value_counts(targets)
 ret = []
 for var in targets.columns:
     _ = pd.crosstab(targets[var], clinic.DiagnosisPlace)
-    _.index = [f'{var.replace("_", " <= ")} - {i}' for i in _.index]
+    _.index = [f'{var.replace("_", " <= ", 1)} - {i}' for i in _.index]
     ret.append(_)
 ret = pd.concat(ret)
 

@@ -18,6 +18,7 @@ vars_binary = [
     'HRS',
     'HE',
     'Icterus',
+    'SBP',
     'Heartdisease',
     'Hypertension',
     'HighCholesterol',
@@ -32,6 +33,14 @@ vars_binary = [
     # Medication
     'InsulinDependent',
     'Statins',
+    'NonselectBetaBlock'
+]
+
+vars_binary_created = [
+    # from DiagnosisPlace
+    'Admission',
+    'AdmissionForOtherDisease',
+    'Outpatient'
 ]
 
 vars_cont = [
