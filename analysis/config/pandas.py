@@ -3,8 +3,8 @@ import pandas as pd
 import pandas.io.formats.format as pf
 
 pd.options.display.max_columns = 100
-pd.options.display.max_rows = 100
-pd.options.display.min_rows = 50
+pd.options.display.max_rows = 30
+pd.options.display.min_rows = 20
 pd.options.display.float_format = '{:,.3f}'.format
 
 

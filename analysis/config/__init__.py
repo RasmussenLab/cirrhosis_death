@@ -4,8 +4,10 @@ from pathlib import Path
 
 STUDY_ENDDATE:str = '2022-08-08'
 
-data:str = 'S:/SUND-CBMR-RegH-cohorts/ProDoc'
-data_processed:str = 'S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed'
+base_folder = 'S:/SUND-CBMR-RegH-cohorts/ProDoc'
+data:str = base_folder
+data_processed:str = f'{base_folder}/data/processed'
+folder_reports = f'{base_folder}/reports'
 
 
 fname_pkl_clinic = Path(data_processed) / 'clinic.pkl'
