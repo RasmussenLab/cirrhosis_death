@@ -21,20 +21,24 @@ import numpy as np
 import pandas as pd
 
 import pingouin as pg
+import sklearn
+from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 import src.stats
 from src.sklearn import run_pca, StandardScaler
+from src.sklearn.scoring import ConfusionMatrix
 
 import config
 
 # %% [markdown]
 # ## Set parameters
 
-# %%
+# %% tags=["parameters"]
 TARGET = 'dead_wi_90_f_infl_sample'
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)
+cols_clinic = src.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(config.fname_pkl_olink)
 
 # %%
@@ -105,8 +109,12 @@ clinic[config.clinic_data.vars_binary].describe()
 # %%
 diff_binomial = []
 for var in config.clinic_data.vars_binary[1:]:
-      diff_binomial.append(src.stats.binomtest(clinic[var], happend))
-pd.concat(diff_binomial).sort_values(('binomial test', 'pvalue'))
+    diff_binomial.append(src.stats.binomtest(clinic[var], happend))
+for var in config.clinic_data.vars_binary_created:
+    diff_binomial.append(src.stats.binomtest(clinic[var], happend))
+diff_binomial = pd.concat(diff_binomial).sort_values(('binomial test', 'pvalue'))
+with pd.option_context('display.max_rows', len(diff_binomial)):
+    display(diff_binomial)
 
 # %% [markdown]
 # ## Olink
@@ -145,7 +153,7 @@ _ = info_missing(olink)
 olink_scaled = StandardScaler().fit_transform(olink).fillna(0)
 
 PCs, pca = run_pca(olink_scaled, n_components=None)
-PCs
+PCs.iloc[:10, :10]
 
 # %%
 olink.columns[np.argmax(np.abs(pca.components_[:,0]))] # eigenvector first PCa, absolut arg max -> variable
@@ -157,17 +165,40 @@ exp_var_olink.index.name = 'PC'
 ax = exp_var_olink.plot()
 
 # %% [markdown]
+# # Initial Modeling
+
+# %%
+y_true = clinic[TARGET]
+predictions = y_true.to_frame('true')
+y_true.value_counts()
+
+# %%
+(y_true.value_counts() / len(y_true))
+
+# %% [markdown]
+# ## Baseline
+# - `age`, `decompensated`, `child-pugh` 
+
+# %%
+X = [cols_clinic.Age, cols_clinic.ChildPugh]
+X = clinic[X].copy()
+X.loc[:,'decompensated'] = clinic.DecomensatedAtDiagnosis.cat.codes
+
+weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y_true)
+
+log_reg = sklearn.linear_model.LogisticRegression()
+log_reg = log_reg.fit(X=X, y=y_true, sample_weight=weights)
+
+# %%
+y_pred = log_reg.predict(X)
+predictions['baseline weighted (LR)'] = y_pred
+ConfusionMatrix(y_true, y_pred).as_dataframe
+
+# %% [markdown]
 # ### Logistic Regression
 
 # %%
-import sklearn
-from sklearn.metrics import auc, precision_recall_curve, roc_curve
-
-from src.sklearn.scoring import ConfusionMatrix
-
-y_true = clinic[TARGET]
 X = PCs.iloc[:,:5]
-y_true.value_counts()
 
 # %% [markdown]
 # #### With weights
@@ -186,6 +217,7 @@ scores
 
 # %%
 y_pred = log_reg.predict(X)
+predictions['5 PCs weighted (LR)'] = y_pred
 
 ConfusionMatrix(y_true, y_pred).as_dataframe
 
@@ -211,7 +243,29 @@ pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
 log_reg = log_reg.fit(X=X, y=y_true, sample_weight=None)
 
 y_prob = log_reg.predict_proba(X)[:,1]
-y_pred = pd.Series((y_prob > 0.21), index=PCs.index).astype(int)
+
+# %%
+fpr, tpr, cutoffs = roc_curve(y_true, y_prob)
+roc = pd.DataFrame([fpr, tpr, cutoffs], index='fpr tpr cutoffs'.split())
+ax = roc.T.plot('fpr', 'tpr')
+
+# %%
+precision, recall, cutoffs = precision_recall_curve(y_true, y_prob)
+prc = pd.DataFrame([precision, recall, cutoffs], index='precision recall cutoffs'.split())
+prc
+
+# %%
+ax = prc.T.plot('recall', 'precision', ylabel='precision')
+
+# %%
+prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (1/prc.loc['precision'] + 1/prc.loc['recall']) 
+f1_max = prc[prc.loc['f1_score'].argmax()]
+f1_max
+
+# %%
+y_pred = pd.Series((y_prob > f1_max.loc['cutoffs']), index=PCs.index).astype(int)
+
+predictions['5 PCs (LR)'] = y_pred
 
 ConfusionMatrix(y_true, y_pred).as_dataframe # this needs to be augmented with information if patient died by now (to see who is "wrongly classified)")
 
@@ -228,15 +282,25 @@ pd.pivot_table(pivot, values='pred', index=TARGET, columns='dead', aggfunc='sum'
 # %%
 pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
 
-# %%
-fpr, tpr, cutoffs = roc_curve(y_true, y_prob)
-roc = pd.DataFrame([fpr, tpr, cutoffs[::-1]], index='fpr tpr cutoffs'.split())
-ax = roc.T.plot('fpr', 'tpr')
+
+# %% [markdown]
+# ## Compare prediction errors between models
 
 # %%
-precision, recall, cutoffs = precision_recall_curve(y_true, y_prob)
-prc = pd.DataFrame([precision, recall, cutoffs[::-1]], index='precision recall cutoffs'.split())
-prc
+def get_mask_fp_tn(predictions:pd.DataFrame):
+    N, M = predictions.shape
+    row_sums = predictions.sum(axis=1)
+    mask = (row_sums == 0) | (row_sums==M)
+    return ~mask
+mask_fp_tn = get_mask_fp_tn(predictions)
+predictions.loc[mask_fp_tn].sort_values(by='true', ascending=False)
 
 # %%
-ax = prc.T.plot('recall', 'precision', ylabel='precision')
+sel_clinic_cols = [cols_clinic.Age, cols_clinic.DiagnosisPlace, cols_clinic.Heartdisease, cols_clinic.TimeToAdmFromDiagnose, cols_clinic.TimeToDeathFromDiagnose, cols_clinic.TimeToDeathFromInfl, cols_clinic.DateDiagnose, cols_clinic.DateBiochemistry_, cols_clinic.DateImmunoglobulins_, cols_clinic.DateInflSample]
+predictions.loc[mask_fp_tn].loc[y_true.astype(bool)].sort_values(by='true', ascending=False).join(clinic[sel_clinic_cols])
+
+# %%
+mask_tp = predictions.sum(axis=1) == 4
+predictions.loc[mask_tp].join(clinic[sel_clinic_cols])
+
+# %%
