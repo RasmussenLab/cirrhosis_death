@@ -124,7 +124,8 @@ olink.loc[:, olink.isna().any()].describe()
 
 # %%
 ana_diff_olink = src.stats.diff_analysis(olink, happend, event_names=('died', 'alive'))
-ana_diff_olink.sort_values(('ttest', 'p-val'))
+with pd.option_context('display.max_rows', len(ana_diff_olink)):
+    display(ana_diff_olink.sort_values(('ttest', 'p-val')))
 
 
 # %% [markdown]

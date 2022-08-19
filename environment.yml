@@ -37,6 +37,7 @@ dependencies:
   - jupyterlab # standalone jupyter installation
   - jupyterlab_code_formatter
   - jupyterlab-git
+  - jupyter_contrib_nbextensions
   - jupyter-dash
   - papermill # execute ipynb's
   # survival analysis

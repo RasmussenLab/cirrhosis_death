@@ -1,0 +1,41 @@
+from config import folder_reports
+from config import fname_pkl_clinic
+from config import fname_pkl_olink
+from config import TARGETS
+
+print(folder_reports)
+
+rule all:
+    input: 
+        t= expand("{out_path}/{target}/1_explorative_analysis.ipynb",
+            out_path=folder_reports,
+            target=TARGETS)
+
+
+nb='0_load_raw_data.ipynb'
+rule prepare_data:
+    input:
+        nb=nb
+    output:
+        fname_pkl_clinic, 
+        fname_pkl_olink,
+        nb=f"{folder_reports}/{nb}",
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
+nb='1_explorative_analysis.ipynb'
+rule analysis:
+    input:
+        fname_pkl_olink,
+        fname_pkl_clinic,
+        nb=nb
+    output:
+        nb="{out_path}/{target}"f"/{nb}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " -r TARGET {wildcards.target}"
+        " && jupyter nbconvert {output.nb} --to html"
