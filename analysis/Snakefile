@@ -17,13 +17,17 @@ rule prepare_data:
     input:
         nb=nb
     output:
-        fname_pkl_clinic, 
-        fname_pkl_olink,
+        clinic_pkl=fname_pkl_clinic, 
+        olink_pkl=fname_pkl_olink,
+        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
+        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && pandas_profiling {output.clinic_pkl}  {output.profiling_report_clinic} -m"
+        " && pandas_profiling {output.olink_pkl}  {output.profiling_report_olink} -m"
 
 
 nb='1_explorative_analysis.ipynb'
