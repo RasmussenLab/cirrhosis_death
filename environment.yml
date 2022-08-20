@@ -9,7 +9,7 @@ channels:
   - bioconda
 dependencies:
   - python
-  - numpy
+  - numpy<1.23
   - pandas
   - pandas-profiling
   - scipy
