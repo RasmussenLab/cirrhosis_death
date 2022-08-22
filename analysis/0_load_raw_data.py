@@ -19,12 +19,12 @@
 # - join OLink and clinical data
 # - create targets: 
 #     
-#   event | next 90 days | next 180 days
-#   --- | --- | ---
-#   death | `dead_90` | `dead_180`
-#   admission to hospital | `adm_90`  | `adm_180`
+# event | next 90 days | next 180 days |
+# --- | --- | --- |
+# death | `dead_90` | `dead_180` | 
+# admission to hospital | `adm_90`  | `adm_180` |
 #     
-#   all cases within 90 days will be included into the 180 days
+# all cases within 90 days will be included into the 180 days
 
 # %%
 from pathlib import Path
@@ -43,6 +43,7 @@ import config
 # %%
 DATA_FOLDER = Path(config.data)
 DATA_PROCESSED = Path(config.data_processed)
+FOLDER_REPORTS = Path(config.folder_reports)
 list(DATA_FOLDER.iterdir())
 
 config.STUDY_ENDDATE
@@ -121,6 +122,8 @@ fig, ax = plt.subplots(figsize=din_a4)
 src.plotting.plot_lifelines(clinic.sort_values('DateDiagnose'), ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
+fig.savefig(FOLDER_REPORTS/ 'lifelines.pdf')
+fig
 
 # %%
 clinic.dead
@@ -140,6 +143,8 @@ ax = clinic.loc[~clinic.dead].astype({
     'dead': 'category'
 }).plot.scatter(x="DateDiagnose", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
 _ = fig.suptitle("Diagnose date by survival status", fontsize=22)
+fig.savefig(FOLDER_REPORTS / 'death_vs_alive_diagonose_dates')
+fig
 
 # %%
 ax = clinic.astype({
@@ -148,6 +153,8 @@ ax = clinic.astype({
 min_date, max_date = clinic["DateDiagnose"].min(), clinic["DateDiagnose"].max()
 ax.plot([min_date, max_date], [min_date, max_date], 'k-', lw=2)
 fig = ax.get_figure()
+fig.savefig(FOLDER_REPORTS / 'timing_deaths_over_time.pdf')
+fig
 
 # %% [markdown]
 # ## Cleanup steps
@@ -235,7 +242,7 @@ cols_view = [
 clinic[cols_view].loc[mask]
 
 # %% [markdown]
-# For these individuals, the diagnose time is censored as the persons died before.
+# For these individuals, the admission time is censored as the persons died before.
 
 # %%
 clinic.loc[mask,
@@ -262,6 +269,9 @@ clinic[cols_view].loc[mask]
 # %%
 clinic[cols_view].describe()
 
+# %%
+clinic[cols_view].dtypes
+
 # %% [markdown]
 # ### Kaplan-Meier survival plot 
 
@@ -269,15 +279,19 @@ clinic[cols_view].describe()
 kmf = KaplanMeierFitter()
 kmf.fit(clinic["TimeToDeathFromDiagnose"], event_observed=clinic["dead"])
 
+fig, ax = plt.subplots()
 y_lim = (0, 1)
 ax = kmf.plot(title='Kaplan Meier survival curve since diagnose',
               xlim=(0, None),
-              ylim=(0, 1),
+              ylim=y_lim,
               xlabel='Time since diagnose',
               ylabel='survival rate',
+              ax=ax,
               legend=False)
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
+fig.savefig(FOLDER_REPORTS / 'km_plot_death.pdf')
+fig
 
 # %%
 _ = sns.catplot(x="TimeToDeathFromDiagnose",
@@ -286,10 +300,14 @@ _ = sns.catplot(x="TimeToDeathFromDiagnose",
                 data=clinic.astype({'dead': 'category'}),
                 height=4,
                 aspect=3)
+_.set_xlabels('Time from diagnose to death or until study end')
 ax = _.fig.get_axes()[0]
 ylim = ax.get_ylim()
 ax.vlines(90, *ylim)
 ax.vlines(180, *ylim)
+fig = ax.get_figure()
+fig.savefig(FOLDER_REPORTS / 'deaths_along_time.pdf')
+fig
 
 # %% [markdown]
 # ### KP plot admissions
@@ -298,6 +316,8 @@ ax.vlines(180, *ylim)
 kmf = KaplanMeierFitter()
 kmf.fit(clinic["TimeToAdmFromDiagnose"], event_observed=clinic['Admissions'])
 
+
+fig, ax = plt.subplots()
 y_lim = (0, 1)
 ax = kmf.plot(title='Kaplan Meier curve for admissions',
               xlim=(0, None),
@@ -307,6 +327,9 @@ ax = kmf.plot(title='Kaplan Meier curve for admissions',
               legend=False)
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
+fig = ax.get_figure()
+fig.savefig(FOLDER_REPORTS / 'km_plot_admission.pdf')
+fig
 
 # %% [markdown]
 # ### Build targets
@@ -355,3 +378,5 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 clinic.to_pickle(config.fname_pkl_clinic)
 olink.to_pickle(config.fname_pkl_olink)
 targets.to_pickle(config.fname_pkl_targets)
+
+# %%
