@@ -17,6 +17,8 @@
 # # Explorative Analysis
 
 # %%
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -31,10 +33,15 @@ from src.sklearn.scoring import ConfusionMatrix
 import config
 
 # %% [markdown]
-# ## Set parameters
+# # Set parameters
 
 # %% tags=["parameters"]
 TARGET = 'dead_wi_90_f_infl_sample'
+FOLDER = ''
+
+# %%
+if not FOLDER:
+    FOLDER = Path(config.folder_reports) / TARGET
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)
@@ -61,7 +68,7 @@ print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index
 clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateDiagnose", "Admissions"]]
 
 # %% [markdown]
-# ## Differences between groups defined by target
+# # Differences between groups defined by target
 
 # %%
 clinic
@@ -76,7 +83,7 @@ pd.crosstab(clinic[TARGET], clinic["DecomensatedAtDiagnosis"])
 happend = clinic[TARGET].astype(bool)
 
 # %% [markdown]
-# ### Continous
+# ## Continous
 
 # %%
 var = 'Age'
@@ -91,10 +98,15 @@ ana_differential = src.stats.diff_analysis(
     happend,
     event_names=('died', 'alive'),
 )
-ana_differential.sort_values(('ttest', 'p-val'))
+ana_differential = ana_differential.sort_values(('ttest', 'p-val'))
+
+writer = pd.ExcelWriter(FOLDER/'differential_analysis.xlsx')
+ana_differential.to_excel(writer, "clinic continous")
+
+ana_differential
 
 # %% [markdown]
-# ### Binary
+# ## Binary
 
 # %%
 clinic[config.clinic_data.vars_binary].describe()
@@ -113,26 +125,60 @@ for var in config.clinic_data.vars_binary[1:]:
 for var in config.clinic_data.vars_binary_created:
     diff_binomial.append(src.stats.binomtest(clinic[var], happend))
 diff_binomial = pd.concat(diff_binomial).sort_values(('binomial test', 'pvalue'))
+diff_binomial.to_excel(writer, 'clinic binary')
 with pd.option_context('display.max_rows', len(diff_binomial)):
     display(diff_binomial)
 
 # %% [markdown]
-# ## Olink
+# ## Olink - uncontrolled
 
 # %%
 olink.loc[:, olink.isna().any()].describe()
 
 # %%
-ana_diff_olink = src.stats.diff_analysis(olink, happend, event_names=('died', 'alive'))
+ana_diff_olink = src.stats.diff_analysis(olink, happend, event_names=('died', 'alive')).sort_values(('ttest', 'p-val'))
+ana_diff_olink.to_excel(writer, "olink simple")
 with pd.option_context('display.max_rows', len(ana_diff_olink)):
-    display(ana_diff_olink.sort_values(('ttest', 'p-val')))
+    display(ana_diff_olink)
+
+# %% [markdown]
+# ## Olink - controlled for with clinical covariates
+
+# %%
+covar = [cols_clinic.Age, cols_clinic.Cancer]
+
+# %%
+olink.columns.name='gene'
+
+# %%
+clinic_ancova = [TARGET, *covar] 
+clinic_ancova = clinic[clinic_ancova].copy()
+clinic_ancova = clinic_ancova.dropna() # for now discard all rows with a missing feature
+categorical_columns = clinic_ancova.columns[clinic_ancova.dtypes == 'category']
+print(categorical_columns)
+for categorical_column in categorical_columns:
+    # only works if no NA and only binary variables!
+    clinic_ancova[categorical_column] = clinic_ancova[categorical_column].cat.codes
+clinic_ancova.describe()
+
+# %%
+# ana_diff_olink = src.stats.diff_analysis(olink, happend, event_names=('died', 'alive'))
+# with pd.option_context('display.max_rows', len(ana_diff_olink)):
+#     display(ana_diff_olink.sort_values(('ttest', 'p-val')))
+
+ancova = src.stats.groups_comparision.ancova_per_feat(olink, clinic_ancova, target=TARGET, covar=covar).sort_values('qvalue')
+ancova.to_excel(writer, "olink controlled")
+ancova.head(20)
+
+# %%
+writer.close()
 
 
 # %% [markdown]
-# ## PCA 
+# # PCA 
 
 # %% [markdown]
-# ### Missing values handling
+# ## Missing values handling
 
 # %%
 def info_missing(df):
@@ -146,7 +192,7 @@ def info_missing(df):
 _ = info_missing(olink)
 
 # %% [markdown]
-# ### PCA on scaled data 
+# ## PCA on scaled data 
 #
 # - missing values set to zero
 
@@ -196,13 +242,13 @@ predictions['baseline weighted (LR)'] = y_pred
 ConfusionMatrix(y_true, y_pred).as_dataframe
 
 # %% [markdown]
-# ### Logistic Regression
+# ## Logistic Regression
 
 # %%
 X = PCs.iloc[:,:5]
 
 # %% [markdown]
-# #### With weights
+# ### With weights
 
 # %%
 weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y_true)
@@ -238,7 +284,7 @@ pd.pivot_table(pivot, values='dead', index=TARGET, columns='pred', aggfunc='sum'
 pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
 
 # %% [markdown]
-# #### Without weights, but adapting cutoff
+# ### Without weights, but adapting cutoff
 
 # %%
 log_reg = log_reg.fit(X=X, y=y_true, sample_weight=None)
