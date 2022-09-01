@@ -36,8 +36,10 @@ import src
 import config
 
 # %%
-clinic = pd.read_pickle(config.fname_pkl_clinic)
+clinic = pd.read_pickle(config.fname_pkl_clinic).reset_index()
 cols_clinic = src.pandas.get_colums_accessor(clinic)
+clinic = clinic.set_index(cols_clinic.Study_ID)
+
 
 # %% [markdown]
 # ## Parameters
@@ -82,3 +84,5 @@ with pd.option_context('display.max_rows', len(outliers.data)):
 
 # %%
 outliers.to_excel(f'{config.folder_reports}/outliers.xlsx')
+
+# %%
