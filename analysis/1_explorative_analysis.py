@@ -23,8 +23,9 @@ import numpy as np
 import pandas as pd
 
 import pingouin as pg
+import seaborn
 import sklearn
-from sklearn.metrics import auc, precision_recall_curve, roc_curve
+from sklearn.metrics import precision_recall_curve, roc_curve
 
 import src.stats
 from src.sklearn import run_pca, StandardScaler
@@ -211,6 +212,9 @@ exp_var_olink["explained variance (cummulated)"] = exp_var_olink['explained vari
 exp_var_olink.index.name = 'PC'
 ax = exp_var_olink.plot()
 
+# %%
+ax = seaborn.scatterplot(x=PCs.iloc[:,0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
+
 # %% [markdown]
 # # Initial Modeling
 
@@ -349,5 +353,36 @@ predictions.loc[mask_fp_tn].loc[y_true.astype(bool)].sort_values(by='true', asce
 # %%
 mask_tp = predictions.sum(axis=1) == 4
 predictions.loc[mask_tp].join(clinic[sel_clinic_cols])
+
+# %% [markdown]
+# ## Plot TP, TN, FP and FN on PCA plot
+
+# %%
+model_pred_cols = predictions.columns[1:5].to_list()
+model_pred_cols
+
+# %%
+binary_labels = pd.DataFrame()
+
+TRUE_COL = 'true'
+for model_pred_col in model_pred_cols:
+    binary_labels[model_pred_col] = predictions.apply(lambda x: src.sklearn.scoring.get_label_binary_classification(
+        x[TRUE_COL], x[model_pred_col]),
+                      axis=1)
+binary_labels.sample(6)
+
+# %%
+colors = seaborn.color_palette(n_colors=4)
+colors
+
+# %%
+import matplotlib.pyplot as plt
+fig, axes = plt.subplots(3,1, figsize=(15,14), sharex=True, sharey=True)
+for model_pred_col, ax in zip(binary_labels.columns, axes.ravel()):
+    ax = seaborn.scatterplot(x=PCs.iloc[:,0], y=PCs.iloc[:, 1], hue=binary_labels[model_pred_col], hue_order=['TN', 'TP', 'FN', 'FP'],
+                             # palette=colors,
+                             palette=[colors[0], colors[2], colors[1], colors[3]],
+                             ax=ax)
+    ax.set_title(model_pred_col)
 
 # %%

@@ -30,3 +30,30 @@ class ConfusionMatrix():
     def __repr__(self):
         """sklearn.metrics.confusion_matrix __repr__"""
         return repr(self.cm_)
+
+
+def get_label_binary_classification(y_true:int, y_pred:int) -> str:
+    if y_true == 1:
+        if y_pred == 1:
+            return 'TP'
+        elif y_pred == 0:
+            return 'FN'
+        else:
+            ValueError(f"Unknown `y_pred`: {y_pred} ({ type(y_pred) })")
+    elif y_true == 0:
+        if y_pred == 0:
+            return 'TN'
+        elif y_pred == 1:
+            return 'FP'
+        else:
+            ValueError(f"Unknown `y_pred`: {y_pred} ({ type(y_pred) })")
+    else:
+        raise ValueError(f"Unknown `y_true`: {y_true} ({ type(y_pred) })")
+
+
+# # for testing
+# import numpy as np
+# for y_true, y_pred, label in zip(np.array([1, 1, 0, 0]),
+#                                  np.array([1, 0, 1, 0]),
+#                                  ['TP', 'FN', 'FP', 'TN']):
+#     assert get_label_binary_classification(y_true, y_pred) == label
