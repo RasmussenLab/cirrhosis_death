@@ -24,14 +24,7 @@
 import numpy as np
 import pandas as pd
 
-# import pingouin as pg
-# import sklearn
-# from sklearn.metrics import auc, precision_recall_curve, roc_curve
-
 import src
-# import src.stats
-# from src.sklearn import run_pca, StandardScaler
-# from src.sklearn.scoring import ConfusionMatrix
 
 import config
 
