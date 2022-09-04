@@ -1,3 +1,4 @@
+"""Variable groups of processed clinical data."""
 vars_binary = [
     # Demographics
     'Sex',
@@ -33,7 +34,8 @@ vars_binary = [
     # Medication
     'InsulinDependent',
     'Statins',
-    'NonselectBetaBlock'
+    'NonselectBetaBlock',
+    # Admisson
 ]
 
 vars_binary_created = [
@@ -41,7 +43,25 @@ vars_binary_created = [
     'Admission',
     'AdmissionForOtherDisease',
     'Outpatient'
+    # from MartialStatus
+     'MaritalStatus_Divorced',
+    'MaritalStatus_Married',
+    'MaritalStatus_Relationship',
+    'MaritalStatus_Separated',
+    'MaritalStatus_Unmarried',
+    'MaritalStatus_Widow/widower'
+    # CauseOfDeath
+    'CoD_LiverRelated',
+    'CoD_NonLiver',
+    'CoD_Unknown',
+    # only encoded:
+    'LiverRelated1admFromInclu',
+    'HeartDiseaseTotal', # encoded
 ]
+
+# HbA1c # laboratory marker?
+# H
+# LiverRelated1admFromInclu
 
 vars_cont = [
     # Demographics
@@ -66,8 +86,9 @@ vars_cont = [
     'TimeToDeathFromDiagnose',
     # clinical variables
     'Admissions',
+    'AmountLiverRelatedAdm',
     # derived scores
     'MELD-score',
     'MELD-Na',
-    'ChildPugh'
+    'ChildPugh',
 ]

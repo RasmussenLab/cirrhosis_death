@@ -31,6 +31,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from pandas_profiling import ProfileReport
 import seaborn as sns
 
@@ -49,7 +50,7 @@ list(DATA_FOLDER.iterdir())
 config.STUDY_ENDDATE
 
 # %%
-DATA_CLINIC = DATA_FOLDER / '2022-08-08_clinical_data.xlsx'
+DATA_CLINIC = DATA_FOLDER / '2022-08-30_clinical_data.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 
 # %%
@@ -171,6 +172,7 @@ fig
 # %%
 # fill missing Admissions with zero, and make it an integer
 clinic["Admissions"] = clinic["Admissions"].fillna(0).astype(int)
+clinic["AmountLiverRelatedAdm"] = clinic["AmountLiverRelatedAdm"].fillna(0).astype(int)
 
 # %% [markdown]
 # Encode binary variables
@@ -188,14 +190,28 @@ clinic[vars_binary] = clinic[vars_binary].astype('category')
 # remaining non numeric variables
 
 # %%
-clinic.loc[:,clinic.dtypes == 'object'].describe()
+mask_cols_obj = clinic.dtypes == 'object'
+clinic.loc[:,mask_cols_obj].describe()
 
 # %%
-clinic = clinic.join(
-    pd.get_dummies(clinic["DiagnosisPlace"]).replace({
+clinic["HbA1c"] = clinic["HbA1c"].replace(to_replace="(NA)", value=np.nan).astype(pd.Int32Dtype())
+clinic["LiverRelated1admFromInclu"] = clinic["LiverRelated1admFromInclu"].replace('x', 1).fillna(0).astype('category')
+clinic["MaritalStatus"] = clinic["MaritalStatus"].astype('category')
+clinic["HeartDiseaseTotal"] = clinic["HeartDiseaseTotal"].replace(0, 'no').astype('category')
+clinic.loc[:,mask_cols_obj].describe(include='all')
+
+
+# %%
+def get_dummies_yes_no(s, prefix=None):
+    return pd.get_dummies(s, prefix=prefix).replace({
         0: 'No',
         1: 'Yes'
-    }).astype('category'))
+    }).astype('category')
+    
+clinic = clinic.join(get_dummies_yes_no(clinic["DiagnosisPlace"]))
+clinic = clinic.join(get_dummies_yes_no(clinic["MaritalStatus"], prefix='MaritalStatus'))
+clinic = clinic.join(get_dummies_yes_no(clinic["CauseOfDeath"], prefix='CoD'))
+clinic
 
 # %% [markdown]
 # ### Olink
@@ -378,5 +394,3 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 clinic.to_pickle(config.fname_pkl_clinic)
 olink.to_pickle(config.fname_pkl_olink)
 targets.to_pickle(config.fname_pkl_targets)
-
-# %%

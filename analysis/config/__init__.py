@@ -2,7 +2,7 @@ import config.pandas
 
 from pathlib import Path
 
-STUDY_ENDDATE: str = '2022-08-08'
+STUDY_ENDDATE: str = '2022-09-04'
 
 base_folder = 'S:/SUND-CBMR-RegH-cohorts/ProDoc'
 data: str = base_folder
