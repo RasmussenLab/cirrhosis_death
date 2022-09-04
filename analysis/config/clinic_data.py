@@ -42,14 +42,14 @@ vars_binary_created = [
     # from DiagnosisPlace
     'Admission',
     'AdmissionForOtherDisease',
-    'Outpatient'
+    'Outpatient',
     # from MartialStatus
      'MaritalStatus_Divorced',
     'MaritalStatus_Married',
     'MaritalStatus_Relationship',
     'MaritalStatus_Separated',
     'MaritalStatus_Unmarried',
-    'MaritalStatus_Widow/widower'
+    'MaritalStatus_Widow/widower',
     # CauseOfDeath
     'CoD_LiverRelated',
     'CoD_NonLiver',
