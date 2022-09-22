@@ -54,6 +54,8 @@ vars_binary_created = [
     'CoD_LiverRelated',
     'CoD_NonLiver',
     'CoD_Unknown',
+    # Non alcohol etiology
+    'EtiNonAlco',
     # only encoded:
     'LiverRelated1admFromInclu',
     'HeartDiseaseTotal', # encoded
@@ -91,4 +93,12 @@ vars_cont = [
     'MELD-score',
     'MELD-Na',
     'ChildPugh',
+]
+
+# relevant comorbidities to control for (all binary)
+comorbidities = [
+    'Cancer',
+    'Depression',
+    'Psychiatric',
+    'Diabetes',
 ]
