@@ -333,6 +333,7 @@ fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_boxplot.pdf')
 
 # %%
 ax = clinic.plot.scatter(x=cols_clinic.DateInclusion, y=cols_clinic.DateInflSample)
+fig = ax.get_figure()
 fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_scatter.pdf')
 
 # %% [markdown]
