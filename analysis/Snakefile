@@ -11,7 +11,9 @@ rule all:
             ["{out_path}/{target}/1_explorative_analysis.ipynb",
              "{out_path}/{target}/2_tree.ipynb"],
             out_path=folder_reports,
-            target=TARGETS)
+            target=TARGETS),
+        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
+        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
 
 nb='0_load_raw_data.ipynb'
 rule prepare_data:
@@ -20,15 +22,23 @@ rule prepare_data:
     output:
         clinic_pkl=fname_pkl_clinic, 
         olink_pkl=fname_pkl_olink,
-        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
-        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
-        " && pandas_profiling {output.clinic_pkl}  {output.profiling_report_clinic} -m"
-        " && pandas_profiling {output.olink_pkl}  {output.profiling_report_olink} -m"
+
+
+rule profile_data:
+    input:
+        clinic_pkl=fname_pkl_clinic, 
+        olink_pkl=fname_pkl_olink,
+    output:
+        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
+        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
+    shell:
+        "pandas_profiling {input.clinic_pkl}  {output.profiling_report_clinic} -m"
+        " && pandas_profiling {input.olink_pkl}  {output.profiling_report_olink} -m"
 
 
 nb='1_explorative_analysis.ipynb'
