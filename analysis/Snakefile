@@ -7,10 +7,11 @@ print(folder_reports)
 
 rule all:
     input: 
-        t= expand("{out_path}/{target}/1_explorative_analysis.ipynb",
+        t= expand(
+            ["{out_path}/{target}/1_explorative_analysis.ipynb",
+             "{out_path}/{target}/2_tree.ipynb"],
             out_path=folder_reports,
             target=TARGETS)
-
 
 nb='0_load_raw_data.ipynb'
 rule prepare_data:
@@ -32,6 +33,21 @@ rule prepare_data:
 
 nb='1_explorative_analysis.ipynb'
 rule analysis:
+    input:
+        fname_pkl_olink,
+        fname_pkl_clinic,
+        nb=nb
+    output:
+        nb="{out_path}/{target}"f"/{nb}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " -r TARGET {wildcards.target}"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
+nb='2_tree.ipynb'
+rule decision_tree:
     input:
         fname_pkl_olink,
         fname_pkl_clinic,

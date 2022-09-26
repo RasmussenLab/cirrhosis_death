@@ -2,10 +2,10 @@
 name: cirrhosis_death
 channels:
   - defaults
-  - pytorch
-  - fastai
-  - plotly
+  # - pytorch
+  # - fastai
   - conda-forge
+  - plotly
   - bioconda
 dependencies:
   - python
@@ -18,7 +18,8 @@ dependencies:
   - matplotlib
   - plotly
   - seaborn
-  - pip
+  # - graphviz
+  - python-graphviz
   # ML, stats
   - scikit-learn
   - pingouin
@@ -38,7 +39,7 @@ dependencies:
   - jupyterlab # standalone jupyter installation
   - jupyterlab_code_formatter
   - jupyterlab-git
-  - jupyter_contrib_nbextensions
+  # - jupyter_contrib_nbextensions
   - jupyter-dash
   - papermill # execute ipynb's
   # survival analysis
@@ -48,7 +49,8 @@ dependencies:
   - pytest
   - pytest-cov
   - jupytext
-  - yapf # code formatting
+  - yapf # code formatting7  
+  - pip
   - pip:
     - -e .
     - mrmr_selection
