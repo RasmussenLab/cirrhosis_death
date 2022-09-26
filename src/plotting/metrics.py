@@ -11,6 +11,7 @@ def plot_split_auc(result: ResultsSplit, name: str, ax: matplotlib.axes.Axes) ->
     ax = roc.T.plot('fpr', col_name,
                     xlabel='false positive rate',
                     ylabel='true positive rate',
+                    style='.-',
                     ax=ax)
     return ax
 
@@ -22,5 +23,6 @@ def plot_split_prc(result: ResultsSplit, name: str, ax: matplotlib.axes.Axes) ->
     ax = roc.T.plot('recall', col_name,
                     xlabel='true positive rate',
                     ylabel='precision',
+                    style='.-',
                     ax=ax)
     return ax

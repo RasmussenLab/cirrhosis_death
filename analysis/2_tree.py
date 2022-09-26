@@ -40,7 +40,8 @@ import config
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'dead90infl'
+TARGET = 'dead090infl'
+TARGET = 'hasLiverAdm090infl'
 FOLDER = ''
 
 # %%
@@ -100,7 +101,7 @@ clinic.dtypes.value_counts()
 # %%
 X = (olink
      .join(clinic[config.clinic_data.vars_cont])
-     .join(clinic[config.clinic_data.comorbidities].astype('object').replace({'Yes': 1, 'No': 0}))
+     .join(clinic[config.clinic_data.comorbidities].astype('object').replace({'Yes': 1, 'No': 0, 'yes': 1, 'no': 0}))
     )
 
 # %%
@@ -122,7 +123,10 @@ X = transform_DataFrame(X, median_imputer.fit_transform)
 # %%
 clf = sklearn.tree.DecisionTreeClassifier(criterion='log_loss',
                                           max_depth=3,
-                                          min_samples_leaf=2)
+                                          min_samples_leaf=1,
+                                          # min_samples_split=4,
+                                          max_features=X.shape[-1]
+                                         )
 clf = clf.fit(X, y)
 
 # rerunning this shows differences in deeper nodes
@@ -132,6 +136,7 @@ nodes = sklearn.tree.plot_tree(clf,
                                class_names=["False", "True", "none"],
                                filled=True,
                                ax=ax)
+fig.tight_layout()
 fig.savefig(FOLDER / 'decision_tree.pdf')
 
 # %%
@@ -143,5 +148,3 @@ ax = plot_split_prc(results_train, 'Decision Tree', ax)
 # - [ ] olink data only
 # - [ ] clinial data only
 # - [ ] laboratory (biochemistry) only?
-
-# %%
