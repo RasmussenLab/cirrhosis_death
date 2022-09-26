@@ -34,7 +34,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from pandas_profiling import ProfileReport
+
 import seaborn as sns
 
 from lifelines import KaplanMeierFitter
@@ -53,10 +53,21 @@ config.STUDY_ENDDATE
 
 # %%
 DATA_CLINIC = DATA_FOLDER / '2022-09-09_clinical_data.xlsx'
+DATA_META = DATA_FOLDER / 'data_sheets.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 
+# %% [markdown]
+# Load sheet `rename` from meta data and rename specified columns
+
 # %%
-clinic = pd.read_excel(DATA_CLINIC)
+to_rename = pd.read_excel(DATA_META, sheet_name='rename', header=None, index_col=0).to_dict()[1]
+to_rename
+
+# %% [markdown]
+# Load clinical data
+
+# %%
+clinic = pd.read_excel(DATA_CLINIC).rename(columns=to_rename)
 clinic.SampleID = clinic.SampleID.str.replace(' ', '')
 cols_clinic = src.pandas.get_colums_accessor(clinic)
 clinic = clinic.set_index('SampleID').sort_index()
@@ -224,7 +235,7 @@ etiology_mask_yes = clinic.loc[:, clinic.columns.str.contains("Eti")] == 'Yes'
 etiology_mask_yes.sum(axis=1).value_counts()
 
 # %%
-etiology_mask_yes.drop('EtiAlco', axis=1).sum(axis=1).astype(bool)
+# etiology_mask_yes.drop('EtiAlco', axis=1).sum(axis=1).astype(bool)
 
 # %%
 clinic["EtiNonAlco"] = (clinic["EtiAlco"] == 'No') & (etiology_mask_yes.drop('EtiAlco', axis=1).sum(axis=1).astype(bool))
@@ -389,29 +400,24 @@ clinic.loc[:,mask] = clinic.loc[:,mask].fillna(0)
 clinic.loc[:,mask].describe()
 
 # %%
-mask = clinic.columns.str.contains("LiverAdm(90|180)")
-clinic.loc[:,clinic.columns.str.contains("LiverAdm(90|180)")].describe() # four targets for liver related admissions
+mask = clinic.columns.str.contains("Adm(090|180)")
+clinic.loc[:,mask].describe() # four targets for liver related admissions
 
 # %%
-{k:k for k in clinic.columns[mask]}
+target_name = {k:f'has{k}' for k in clinic.columns[mask]}
+target_name
 
 # %%
 targets = {}
 
 for cutoff in [90, 180]:
-    targets[f'dead{cutoff}incl'] = (clinic["DaysToDeathFromInclusion"] <=
+    targets[f'dead{cutoff:03}incl'] = (clinic["DaysToDeathFromInclusion"] <=
                                     cutoff).astype(int)
-    targets[f'dead{cutoff}infl'] = (clinic["DaysToDeathFromInfl"] <=
+    targets[f'dead{cutoff:03}infl'] = (clinic["DaysToDeathFromInfl"] <=
                                     cutoff).astype(int)
 targets = pd.DataFrame(targets)
 targets = targets.join((clinic.loc[:, mask] > 0).astype(int).rename(
-    {
-        'LiverAdm90infl': 'hasLiverAdm90infl',
-        'LiverAdm180infl': 'hasLiverAdm180infl',
-        'LiverAdm90incl': 'hasLiverAdm90incl',
-        'LiverAdm180incl': 'hasLiverAdm180incl'
-    },
-    axis=1))
+    columns=target_name))
 # targets = targets.sort_index(axis=1, ascending=False)
 targets.describe()
 

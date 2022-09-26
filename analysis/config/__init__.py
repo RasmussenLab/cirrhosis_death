@@ -17,7 +17,32 @@ fname_pkl_targets = Path(data_processed) / 'targets.pkl'
 from . import clinic_data
 
 TARGETS = [
-    'dead90incl', 'dead90infl', 'dead180incl', 'dead180infl',
-    'hasLiverAdm90infl', 'hasLiverAdm180infl', 'hasLiverAdm90incl',
-    'hasLiverAdm180incl'
+    # dead within 90 days or 180 days
+    # incl -> from inclusion date
+    # infl -> from inflammation sample date
+    'dead090incl',
+    'dead090infl',
+    'dead180incl',
+    'dead180infl',
+    ##### different admission variables
+    # -> TotalAdm: number of total admissions
+    'hasTotalAdm180infl',
+    # InfecAdm: Infection related admission (with link to liver disease)
+    'hasInfecAdm180infl',
+    'hasTotalAdm090infl',
+    'hasInfecAdm090infl',
+    'hasTotalAdm180incl',
+    'hasInfecAdm180incl',
+    'hasTotalAdm090incl',
+    'hasInfecAdm090incl',
+    # LiverAdm: Liver related Admission
+    'hasLiverAdm090infl',
+    # has InfecAdm or LiverAdm
+    'hasLiverInfecAdm090infl',
+    'hasLiverAdm180infl',
+    'hasLiverInfecAdm180infl',
+    'hasLiverAdm090incl',
+    'hasLiverInfecAdm090incl',
+    'hasLiverAdm180incl',
+    'hasLiverInfecAdm180incl'
 ]
