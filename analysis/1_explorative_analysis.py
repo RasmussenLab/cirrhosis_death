@@ -37,12 +37,13 @@ import config
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'dead_wi_90_f_infl_sample'
+TARGET = 'dead90infl'
 FOLDER = ''
 
 # %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
+    FOLDER.mkdir(exist_ok=True)
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)
@@ -56,8 +57,8 @@ pd.crosstab(clinic.DiagnosisPlace, clinic.dead)
 # FirstAdmission is also right-censored
 
 # %%
-time_from_diagnose_to_first_admission = clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) - clinic["DateDiagnose"]
-time_from_diagnose_to_first_admission.describe()
+time_from_inclusion_to_first_admission = clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) - clinic["DateInclusion"]
+time_from_inclusion_to_first_admission.describe()
 
 # %% [markdown]
 # Who dies without having a first Admission date?
@@ -66,7 +67,7 @@ time_from_diagnose_to_first_admission.describe()
 dead_wo_adm = clinic["DateFirstAdmission"].isna() & clinic['dead']
 idx_dead_wo_adm = dead_wo_adm.loc[dead_wo_adm].index
 print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index)
-clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateDiagnose", "Admissions"]]
+clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateInclusion", cols_clinic.AmountLiverRelatedAdm]]
 
 # %% [markdown]
 # # Differences between groups defined by target
@@ -347,7 +348,7 @@ mask_fp_tn = get_mask_fp_tn(predictions)
 predictions.loc[mask_fp_tn].sort_values(by='true', ascending=False)
 
 # %%
-sel_clinic_cols = [cols_clinic.Age, cols_clinic.DiagnosisPlace, cols_clinic.Heartdisease, cols_clinic.TimeToAdmFromDiagnose, cols_clinic.TimeToDeathFromDiagnose, cols_clinic.TimeToDeathFromInfl, cols_clinic.DateDiagnose, cols_clinic.DateBiochemistry_, cols_clinic.DateImmunoglobulins_, cols_clinic.DateInflSample]
+sel_clinic_cols = [cols_clinic.Age, cols_clinic.DiagnosisPlace, cols_clinic.Heartdisease, cols_clinic.DaysToAdmFromInclusion, cols_clinic.DaysToDeathFromInclusion, cols_clinic.DaysToDeathFromInfl, cols_clinic.DateInclusion, cols_clinic.DateBiochemistry_, cols_clinic.DateImmunoglobulins_, cols_clinic.DateInflSample]
 predictions.loc[mask_fp_tn].loc[y_true.astype(bool)].sort_values(by='true', ascending=False).join(clinic[sel_clinic_cols])
 
 # %%
@@ -377,12 +378,10 @@ colors
 
 # %%
 import matplotlib.pyplot as plt
-fig, axes = plt.subplots(3,1, figsize=(15,14), sharex=True, sharey=True)
+fig, axes = plt.subplots(3,1, figsize=(10,20), sharex=True, sharey=True)
 for model_pred_col, ax in zip(binary_labels.columns, axes.ravel()):
     ax = seaborn.scatterplot(x=PCs.iloc[:,0], y=PCs.iloc[:, 1], hue=binary_labels[model_pred_col], hue_order=['TN', 'TP', 'FN', 'FP'],
                              # palette=colors,
                              palette=[colors[0], colors[2], colors[1], colors[3]],
                              ax=ax)
     ax.set_title(model_pred_col)
-
-# %%

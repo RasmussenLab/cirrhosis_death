@@ -16,15 +16,16 @@
 # %% [markdown]
 # # Raw Data
 #
-# - join OLink and clinical data
+# - prepare OLink and clinical data
+# - create views on data
 # - create targets: 
 #     
 # event | next 90 days | next 180 days |
 # --- | --- | --- |
-# death | `dead_90` | `dead_180` | 
-# admission to hospital | `adm_90`  | `adm_180` |
+# death | `dead90` | `dead180` | 
+# admission to hospital | `adm90`  | `adm180` |
 #     
-# all cases within 90 days will be included into the 180 days
+# all cases within 90 days will be included into the 180 days, from `incl`usion and from `infl`ammation sample time.
 
 # %%
 import datetime
@@ -109,7 +110,6 @@ src.plotting.plot_lifelines(clinic.sort_values('DateInclusion'), start_col='Date
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 fig.savefig(FOLDER_REPORTS/ 'lifelines.pdf')
-fig
 
 # %%
 clinic.dead.value_counts()
@@ -130,7 +130,6 @@ ax = clinic.loc[~clinic.dead].astype({
 }).plot.scatter(x="DateInclusion", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
 _ = fig.suptitle("Inclusion date by survival status", fontsize=22)
 fig.savefig(FOLDER_REPORTS / 'death_vs_alive_diagonose_dates')
-fig
 
 # %%
 ax = clinic.astype({
@@ -157,7 +156,6 @@ ax.plot([min_date, max_date],
 _ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
 fig = ax.get_figure()
 fig.savefig(FOLDER_REPORTS / 'timing_deaths_over_time.pdf')
-fig
 
 # %% [markdown]
 # ## Cleanup steps
@@ -259,22 +257,22 @@ olink = olink.loc[:,'IL8':]
 olink.loc[:, olink.isna().any()].describe() 
 
 # %% [markdown]
-# ## Targets
+# ## Timespans
 #
 # - death only has right censoring, no drop-out
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
 
 # %%
-clinic["TimeToAdmFromInclusion"] = (
+clinic["DaysToAdmFromInclusion"] = (
     clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInclusion"]).dt.days
-clinic["TimeToDeathFromInclusion"] = (
+clinic["DaysToDeathFromInclusion"] = (
     clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInclusion"]).dt.days
 
-mask = clinic["TimeToDeathFromInclusion"] < clinic["TimeToAdmFromInclusion"]
+mask = clinic["DaysToDeathFromInclusion"] < clinic["DaysToAdmFromInclusion"]
 cols_view = [
-    "TimeToDeathFromInclusion", "TimeToAdmFromInclusion", "dead", cols_clinic.AmountLiverRelatedAdm, "Age"
+    "DaysToDeathFromInclusion", "DaysToAdmFromInclusion", "dead", cols_clinic.AmountLiverRelatedAdm, "Age"
 ]
 clinic[cols_view].loc[mask]
 
@@ -283,23 +281,23 @@ clinic[cols_view].loc[mask]
 
 # %%
 clinic.loc[mask,
-           "TimeToAdmFromInclusion"] = clinic.loc[mask,
-                                                 "TimeToDeathFromInclusion"]
+           "DaysToAdmFromInclusion"] = clinic.loc[mask,
+                                                 "DaysToDeathFromInclusion"]
 clinic.loc[mask, cols_view]
 
 # %%
-clinic["TimeToAdmFromInflSample"] = (
+clinic["DaysToAdmFromInflSample"] = (
     clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInflSample"]).dt.days
-clinic["TimeToDeathFromInfl"] = (
+clinic["DaysToDeathFromInfl"] = (
     clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInflSample"]).dt.days
 
 cols_clinic = src.pandas.get_colums_accessor(clinic)
 
 cols_view = [
-    "TimeToDeathFromInclusion", cols_clinic.TimeToDeathFromInfl,
-    "TimeToAdmFromInclusion", cols_clinic.TimeToAdmFromInflSample, "dead",
+    "DaysToDeathFromInclusion", cols_clinic.DaysToDeathFromInfl,
+    "DaysToAdmFromInclusion", cols_clinic.DaysToAdmFromInflSample, "dead",
     "AmountLiverRelatedAdm", "Age"
 ]
 mask = (clinic[cols_view] < 0).any(axis=1)
@@ -312,11 +310,26 @@ clinic[cols_view].describe()
 clinic[cols_view].dtypes
 
 # %% [markdown]
-# ### Kaplan-Meier survival plot 
+# ## Days from Inclusion to Inflammatory Sample
+
+# %%
+clinic["DaysFromInclToInflSample"] = (clinic["DateInflSample"] - clinic["DateInclusion"]).dt.days
+fig, ax = plt.subplots(figsize=(2,5))
+_ = clinic["DaysFromInclToInflSample"].plot(kind='box', ax=ax)
+_ = ax.set_ylabel('days from inclusion')
+_ = ax.set_xticklabels([''])
+fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_boxplot.pdf')
+
+# %%
+ax = clinic.plot.scatter(x=cols_clinic.DateInclusion, y=cols_clinic.DateInflSample)
+fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_scatter.pdf')
+
+# %% [markdown]
+# ## Kaplan-Meier survival plot 
 
 # %%
 kmf = KaplanMeierFitter()
-kmf.fit(clinic["TimeToDeathFromInclusion"], event_observed=clinic["dead"])
+kmf.fit(clinic["DaysToDeathFromInclusion"], event_observed=clinic["dead"])
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
@@ -330,10 +343,9 @@ ax = kmf.plot(#title='Kaplan Meier survival curve since inclusion',
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 fig.savefig(FOLDER_REPORTS / 'km_plot_death.pdf')
-fig
 
 # %%
-_ = sns.catplot(x="TimeToDeathFromInclusion",
+_ = sns.catplot(x="DaysToDeathFromInclusion",
                 y="dead",
                 hue="DiagnosisPlace",
                 data=clinic.astype({'dead': 'category'}),
@@ -346,14 +358,13 @@ ax.vlines(90, *ylim)
 ax.vlines(180, *ylim)
 fig = ax.get_figure()
 fig.savefig(FOLDER_REPORTS / 'deaths_along_time.pdf')
-fig
 
 # %% [markdown]
-# ### KP plot admissions
+# ## KP plot admissions
 
 # %%
 kmf = KaplanMeierFitter()
-kmf.fit(clinic["TimeToAdmFromInclusion"], event_observed=clinic["AmountLiverRelatedAdm"])
+kmf.fit(clinic["DaysToAdmFromInclusion"], event_observed=clinic["AmountLiverRelatedAdm"])
 
 
 fig, ax = plt.subplots()
@@ -368,10 +379,9 @@ _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 fig = ax.get_figure()
 fig.savefig(FOLDER_REPORTS / 'km_plot_admission.pdf')
-fig
 
 # %% [markdown]
-# ### Build targets
+# ## Targets
 
 # %%
 mask = clinic.columns.str.contains("(90|180)")
@@ -389,9 +399,9 @@ clinic.loc[:,clinic.columns.str.contains("LiverAdm(90|180)")].describe() # four 
 targets = {}
 
 for cutoff in [90, 180]:
-    targets[f'dead{cutoff}incl'] = (clinic["TimeToDeathFromInclusion"] <=
+    targets[f'dead{cutoff}incl'] = (clinic["DaysToDeathFromInclusion"] <=
                                     cutoff).astype(int)
-    targets[f'dead{cutoff}infl'] = (clinic["TimeToDeathFromInfl"] <=
+    targets[f'dead{cutoff}infl'] = (clinic["DaysToDeathFromInfl"] <=
                                     cutoff).astype(int)
 targets = pd.DataFrame(targets)
 targets = targets.join((clinic.loc[:, mask] > 0).astype(int).rename(

@@ -12,6 +12,7 @@ dependencies:
   - numpy<1.23
   - pandas
   - pandas-profiling
+  - sweetviz
   - scipy
   # plotting
   - matplotlib
@@ -50,3 +51,4 @@ dependencies:
   - yapf # code formatting
   - pip:
     - -e .
+    - mrmr_selection

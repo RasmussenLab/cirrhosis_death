@@ -66,9 +66,9 @@ vars_binary_created = [
 # LiverRelated1admFromInclu
 
 vars_cont = [
-    # Demographics
+    # # Demographics
     'Age',
-    # laboratory markers
+    # # laboratory markers
     'IgM',
     'IgG',
     'IgA',
@@ -81,15 +81,15 @@ vars_cont = [
     'pp',
     'INR',
     'ALAT',
-    # Intervals
-    'TimeToDeath',
-    'TimeToAdmFromDiagnose',
-    'TimeToAdmFromSample',
-    'TimeToDeathFromDiagnose',
-    # clinical variables
-    'Admissions',
+    # # Intervals
+    # 'DaysToDeath',
+    # 'DaysToAdmFromDiagnose',
+    # 'DaysToAdmFromSample',
+    # 'DaysToDeathFromDiagnose',
+    "DaysFromInclToInflSample",
+    # # clinical variables
     'AmountLiverRelatedAdm',
-    # derived scores
+    # # derived scores
     'MELD-score',
     'MELD-Na',
     'ChildPugh',

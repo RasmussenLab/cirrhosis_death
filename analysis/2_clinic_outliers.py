@@ -39,7 +39,7 @@ clinic = clinic.set_index(cols_clinic.Study_ID)
 
 # %%
 IQR_FACTOR = 1.5
-EXCLUDED = 'TimeToDeath,TimeToAdmFromDiagnose,TimeToAdmFromSample,TimeToDeathFromDiagnose'
+EXCLUDED = 'DaysToDeath,DaysToAdmFromDiagnose,DaysToAdmFromSample,DaysToDeathFromDiagnose'
 
 # %%
 vars_cont_sel = [x for x in config.clinic_data.vars_cont if x not in EXCLUDED.split(',')]
