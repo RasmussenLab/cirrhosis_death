@@ -44,7 +44,7 @@ vars_binary_created = [
     'AdmissionForOtherDisease',
     'Outpatient',
     # from MartialStatus
-     'MaritalStatus_Divorced',
+    'MaritalStatus_Divorced',
     'MaritalStatus_Married',
     'MaritalStatus_Relationship',
     'MaritalStatus_Separated',
@@ -87,12 +87,15 @@ vars_cont = [
     # 'DaysToAdmFromSample',
     # 'DaysToDeathFromDiagnose',
     "DaysFromInclToInflSample",
-    # # clinical variables
-    'AmountLiverRelatedAdm',
     # # derived scores
     'MELD-score',
     'MELD-Na',
     'ChildPugh',
+]
+
+
+counts = [  # # admission
+            'AmountLiverRelatedAdm',
 ]
 
 # relevant comorbidities to control for (all binary)
@@ -101,4 +104,7 @@ comorbidities = [
     'Depression',
     'Psychiatric',
     'Diabetes',
+    'HeartDiseaseTotal',
+    'Hypertension',
+    'HighCholesterol',
 ]

@@ -37,7 +37,7 @@ import config
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'dead90infl'
+TARGET = 'dead090infl'
 FOLDER = ''
 
 # %%
@@ -147,7 +147,8 @@ with pd.option_context('display.max_rows', len(ana_diff_olink)):
 # ## Olink - controlled for with clinical covariates
 
 # %%
-covar = [cols_clinic.Age, cols_clinic.Cancer]
+covar = [cols_clinic.Sex, cols_clinic.Age, *config.clinic_data.comorbidities]
+covar
 
 # %%
 olink.columns.name='gene'
