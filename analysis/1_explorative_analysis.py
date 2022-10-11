@@ -57,7 +57,7 @@ pd.crosstab(clinic.DiagnosisPlace, clinic.dead)
 # FirstAdmission is also right-censored
 
 # %%
-time_from_inclusion_to_first_admission = clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) - clinic["DateInclusion"]
+time_from_inclusion_to_first_admission = clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) - clinic["DateInflSample"]
 time_from_inclusion_to_first_admission.describe()
 
 # %% [markdown]
@@ -67,7 +67,7 @@ time_from_inclusion_to_first_admission.describe()
 dead_wo_adm = clinic["DateFirstAdmission"].isna() & clinic['dead']
 idx_dead_wo_adm = dead_wo_adm.loc[dead_wo_adm].index
 print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index)
-clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateInclusion", cols_clinic.AmountLiverRelatedAdm]]
+clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateInflSample", cols_clinic.LiverAdm180]]
 
 # %% [markdown]
 # # Differences between groups defined by target
@@ -349,7 +349,7 @@ mask_fp_tn = get_mask_fp_tn(predictions)
 predictions.loc[mask_fp_tn].sort_values(by='true', ascending=False)
 
 # %%
-sel_clinic_cols = [cols_clinic.Age, cols_clinic.DiagnosisPlace, cols_clinic.Heartdisease, cols_clinic.DaysToAdmFromInclusion, cols_clinic.DaysToDeathFromInclusion, cols_clinic.DaysToDeathFromInfl, cols_clinic.DateInclusion, cols_clinic.DateBiochemistry_, cols_clinic.DateImmunoglobulins_, cols_clinic.DateInflSample]
+sel_clinic_cols = [cols_clinic.Age, cols_clinic.DiagnosisPlace, cols_clinic.HeartDiseaseTotal, cols_clinic.DaysToAdmFromInflSample, cols_clinic.DaysToDeathFromInfl, cols_clinic.DaysToDeathFromInfl, cols_clinic.DateInflSample, cols_clinic.DateBiochemistry_, cols_clinic.DateImmunoglobulins_, cols_clinic.DateInflSample]
 predictions.loc[mask_fp_tn].loc[y_true.astype(bool)].sort_values(by='true', ascending=False).join(clinic[sel_clinic_cols])
 
 # %%

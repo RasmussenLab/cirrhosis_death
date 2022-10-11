@@ -41,12 +41,13 @@ import config
 
 # %% tags=["parameters"]
 TARGET = 'dead090infl'
-TARGET = 'hasLiverAdm090infl'
+TARGET = 'hasLiverAdm90'
 FOLDER = ''
 
 # %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
+    FOLDER.mkdir(exist_ok=True, parents=True)
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic)

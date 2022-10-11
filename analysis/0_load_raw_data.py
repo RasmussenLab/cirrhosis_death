@@ -52,7 +52,7 @@ list(DATA_FOLDER.iterdir())
 config.STUDY_ENDDATE
 
 # %%
-DATA_CLINIC = DATA_FOLDER / '2022-09-09_clinical_data.xlsx'
+DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-09-28.xlsx'
 DATA_META = DATA_FOLDER / 'data_sheets.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 
@@ -110,14 +110,14 @@ olink.describe(datetime_is_numeric=True, include='all')
 
 
 # %%
-clinic['dead'] = (clinic['DateDeath'] - clinic['DateInclusion']).notna()
+clinic['dead'] = (clinic['DateDeath'] - clinic['DateInflSample']).notna()
 clinic["DateDeath"] = clinic["DateDeath"].fillna(value=config.STUDY_ENDDATE)
 
 # %%
 din_a4 = (8.27 * 2, 11.69 * 2)
 fig, ax = plt.subplots(figsize=din_a4)
 
-src.plotting.plot_lifelines(clinic.sort_values('DateInclusion'), start_col='DateInclusion', ax=ax)
+src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'), start_col='DateInflSample', ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 fig.savefig(FOLDER_REPORTS/ 'lifelines.pdf')
@@ -132,24 +132,24 @@ ax.set_yticks([])
 
 ax = clinic.loc[clinic.dead].astype({
     'dead': 'category'
-}).plot.scatter(x="DateInclusion", y="dead", c='blue', rot=45, ax=ax, ylabel='dead')
+}).plot.scatter(x="DateInflSample", y="dead", c='blue', rot=45, ax=ax, ylabel='dead')
 ax =  axes[1]
 # ax.axes.yaxis.set_visible(False)
 ax.set_yticks([])
 ax = clinic.loc[~clinic.dead].astype({
     'dead': 'category'
-}).plot.scatter(x="DateInclusion", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
+}).plot.scatter(x="DateInflSample", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
 _ = fig.suptitle("Inclusion date by survival status", fontsize=22)
 fig.savefig(FOLDER_REPORTS / 'death_vs_alive_diagonose_dates')
 
 # %%
 ax = clinic.astype({
     'dead': 'category'
-}).plot.scatter(x="DateInclusion", y='DateDeath', c="dead", rot=45, sharex=False)
+}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", rot=45, sharex=False)
 # ticks = ax.get_xticks()
 # ax.set_xticklabels(ax.get_xticklabels(),  horizontalalignment='right')
 # ax.set_xticks(ticks)
-min_date, max_date = clinic["DateInclusion"].min(), clinic["DateInclusion"].max()
+min_date, max_date = clinic["DateInflSample"].min(), clinic["DateInflSample"].max()
 ax.plot([min_date, max_date],
         [min_date, max_date],
         'k-', lw=2)
@@ -186,7 +186,7 @@ clinic.loc[:, clinic.columns.str.contains("Adm")].describe()
 # %%
 # fill missing Admissions with zero, and make it an integer
 # clinic["Admissions"] = clinic["Admissions"].fillna(0).astype(int)
-clinic["AmountLiverRelatedAdm"] = clinic["AmountLiverRelatedAdm"].fillna(0).astype(int)
+# clinic["AmountLiverRelatedAdm"] = clinic["AmountLiverRelatedAdm"].fillna(0).astype(int)
 
 # %% [markdown]
 # Encode binary variables
@@ -209,7 +209,7 @@ clinic.loc[:,mask_cols_obj].describe()
 
 # %%
 clinic["HbA1c"] = clinic["HbA1c"].replace(to_replace="(NA)", value=np.nan).astype(pd.Int32Dtype())
-clinic["LiverRelated1admFromInclu"] = clinic["LiverRelated1admFromInclu"].replace('x', 1).fillna(0).astype('category')
+# clinic["LiverRelated1admFromInclu"] = clinic["LiverRelated1admFromInclu"].replace('x', 1).fillna(0).astype('category')
 clinic["MaritalStatus"] = clinic["MaritalStatus"].astype('category')
 clinic["HeartDiseaseTotal"] = clinic["HeartDiseaseTotal"].replace(0, 'no').astype('category')
 clinic.loc[:,mask_cols_obj].describe(include='all')
@@ -274,27 +274,27 @@ olink.loc[:, olink.isna().any()].describe()
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
 
 # %%
-clinic["DaysToAdmFromInclusion"] = (
-    clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
-    clinic["DateInclusion"]).dt.days
-clinic["DaysToDeathFromInclusion"] = (
-    clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
-    clinic["DateInclusion"]).dt.days
+# clinic["DaysToAdmFromInclusion"] = (
+#     clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) -
+#     clinic["DateInclusion"]).dt.days
+# clinic["DaysToDeathFromInclusion"] = (
+#     clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
+#     clinic["DateInclusion"]).dt.days
 
-mask = clinic["DaysToDeathFromInclusion"] < clinic["DaysToAdmFromInclusion"]
-cols_view = [
-    "DaysToDeathFromInclusion", "DaysToAdmFromInclusion", "dead", cols_clinic.AmountLiverRelatedAdm, "Age"
-]
-clinic[cols_view].loc[mask]
+# mask = clinic["DaysToDeathFromInclusion"] < clinic["DaysToAdmFromInclusion"]
+# cols_view = [
+#     "DaysToDeathFromInclusion", "DaysToAdmFromInclusion", "dead", cols_clinic.AmountLiverRelatedAdm, "Age"
+# ]
+# clinic[cols_view].loc[mask]
 
 # %% [markdown]
 # For these individuals, the admission time is censored as the persons died before.
 
 # %%
-clinic.loc[mask,
-           "DaysToAdmFromInclusion"] = clinic.loc[mask,
-                                                 "DaysToDeathFromInclusion"]
-clinic.loc[mask, cols_view]
+# clinic.loc[mask,
+#            "DaysToAdmFromInclusion"] = clinic.loc[mask,
+#                                                  "DaysToDeathFromInclusion"]
+# clinic.loc[mask, cols_view]
 
 # %%
 clinic["DaysToAdmFromInflSample"] = (
@@ -307,9 +307,13 @@ clinic["DaysToDeathFromInfl"] = (
 cols_clinic = src.pandas.get_colums_accessor(clinic)
 
 cols_view = [
-    "DaysToDeathFromInclusion", cols_clinic.DaysToDeathFromInfl,
-    "DaysToAdmFromInclusion", cols_clinic.DaysToAdmFromInflSample, "dead",
-    "AmountLiverRelatedAdm", "Age"
+    # "DaysToDeathFromInclusion",
+    cols_clinic.DaysToDeathFromInfl,
+    # "DaysToAdmFromInclusion",
+    cols_clinic.DaysToAdmFromInflSample,
+    "dead",
+    # "AmountLiverRelatedAdm",
+    "Age"
 ]
 mask = (clinic[cols_view] < 0).any(axis=1)
 clinic[cols_view].loc[mask]
@@ -324,46 +328,46 @@ clinic[cols_view].dtypes
 # ## Days from Inclusion to Inflammatory Sample
 
 # %%
-clinic["DaysFromInclToInflSample"] = (clinic["DateInflSample"] - clinic["DateInclusion"]).dt.days
-fig, ax = plt.subplots(figsize=(2,5))
-_ = clinic["DaysFromInclToInflSample"].plot(kind='box', ax=ax)
-_ = ax.set_ylabel('days from inclusion')
-_ = ax.set_xticklabels([''])
-fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_boxplot.pdf')
+# clinic["DaysFromInclToInflSample"] = (clinic["DateInflSample"] - clinic["DateInclusion"]).dt.days
+# fig, ax = plt.subplots(figsize=(2,5))
+# _ = clinic["DaysFromInclToInflSample"].plot(kind='box', ax=ax)
+# _ = ax.set_ylabel('days from inclusion')
+# _ = ax.set_xticklabels([''])
+# fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_boxplot.pdf')
 
 # %%
-ax = clinic.plot.scatter(x=cols_clinic.DateInclusion, y=cols_clinic.DateInflSample)
-fig = ax.get_figure()
-fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_scatter.pdf')
+# ax = clinic.plot.scatter(x=cols_clinic.DateInclusion, y=cols_clinic.DateInflSample)
+# fig = ax.get_figure()
+# fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_scatter.pdf')
 
 # %% [markdown]
 # ## Kaplan-Meier survival plot 
 
 # %%
 kmf = KaplanMeierFitter()
-kmf.fit(clinic["DaysToDeathFromInclusion"], event_observed=clinic["dead"])
+kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["dead"])
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(#title='Kaplan Meier survival curve since inclusion',
-              xlim=(0, None),
-              ylim=y_lim,
-              xlabel='Days since inclusion',
-              ylabel='survival rate',
-              ax=ax,
-              legend=False)
+ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
+    xlim=(0, None),
+    ylim=y_lim,
+    xlabel='Days since inflammation sample',
+    ylabel='survival rate',
+    ax=ax,
+    legend=False)
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 fig.savefig(FOLDER_REPORTS / 'km_plot_death.pdf')
 
 # %%
-_ = sns.catplot(x="DaysToDeathFromInclusion",
+_ = sns.catplot(x="DaysToDeathFromInfl",
                 y="dead",
                 hue="DiagnosisPlace",
                 data=clinic.astype({'dead': 'category'}),
                 height=4,
                 aspect=3)
-_.set_xlabels('Days from inclusion to death or until study end')
+_.set_xlabels('Days from inflammation sample to death or until study end')
 ax = _.fig.get_axes()[0]
 ylim = ax.get_ylim()
 ax.vlines(90, *ylim)
@@ -376,7 +380,7 @@ fig.savefig(FOLDER_REPORTS / 'deaths_along_time.pdf')
 
 # %%
 kmf = KaplanMeierFitter()
-kmf.fit(clinic["DaysToAdmFromInclusion"], event_observed=clinic["AmountLiverRelatedAdm"])
+kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["LiverAdm180"].fillna(0))
 
 
 fig, ax = plt.subplots()
@@ -384,7 +388,7 @@ y_lim = (0, 1)
 ax = kmf.plot(#title='Kaplan Meier curve for liver related admissions',
               xlim=(0, None),
               ylim=(0, 1),
-              xlabel='Days since inclusion',
+              xlabel='Days since inflammation sample',
               ylabel='remaining with non-liver related admission',
               legend=False)
 _ = ax.vlines(90, *y_lim)
@@ -401,7 +405,7 @@ clinic.loc[:,mask] = clinic.loc[:,mask].fillna(0)
 clinic.loc[:,mask].describe()
 
 # %%
-mask = clinic.columns.str.contains("Adm(090|180)")
+mask = clinic.columns.str.contains("Adm(90|180)")
 clinic.loc[:,mask].describe() # four targets for liver related admissions
 
 # %%
@@ -412,8 +416,8 @@ target_name
 targets = {}
 
 for cutoff in [90, 180]:
-    targets[f'dead{cutoff:03}incl'] = (clinic["DaysToDeathFromInclusion"] <=
-                                    cutoff).astype(int)
+    # targets[f'dead{cutoff:03}incl'] = (clinic["DaysToDeathFromInclusion"] <=
+    #                                 cutoff).astype(int)
     targets[f'dead{cutoff:03}infl'] = (clinic["DaysToDeathFromInfl"] <=
                                     cutoff).astype(int)
 targets = pd.DataFrame(targets)

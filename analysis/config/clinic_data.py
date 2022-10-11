@@ -20,17 +20,17 @@ vars_binary = [
     'HE',
     'Icterus',
     'SBP',
-    'Heartdisease',
+    # 'Heartdisease',
     'Hypertension',
     'HighCholesterol',
     'Cancer',
     'Depression',
     'Psychiatric',
     'Diabetes',
-    'IschemicHeart',
-    'HeartFailure',
-    'Arrythmia',
-    'OtherHeart',
+    # 'IschemicHeart',
+    # 'HeartFailure',
+    # 'Arrythmia',
+    # 'OtherHeart',
     # Medication
     'InsulinDependent',
     'Statins',
@@ -57,7 +57,7 @@ vars_binary_created = [
     # Non alcohol etiology
     'EtiNonAlco',
     # only encoded:
-    'LiverRelated1admFromInclu',
+    # 'LiverRelated1admFromInclu',
     'HeartDiseaseTotal', # encoded
 ]
 
@@ -86,7 +86,7 @@ vars_cont = [
     # 'DaysToAdmFromDiagnose',
     # 'DaysToAdmFromSample',
     # 'DaysToDeathFromDiagnose',
-    "DaysFromInclToInflSample",
+    # "DaysFromInclToInflSample",
     # # derived scores
     'MELD-score',
     'MELD-Na',
