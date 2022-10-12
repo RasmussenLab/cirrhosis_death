@@ -138,7 +138,7 @@ nodes = sklearn.tree.plot_tree(clf,
                                filled=True,
                                ax=ax)
 fig.tight_layout()
-fig.savefig(FOLDER / 'decision_tree.pdf')
+fig.savefig(FOLDER / '2_decision_tree.pdf')
 
 # %%
 results_train = src.sklearn.get_results_split(clf, X, y)

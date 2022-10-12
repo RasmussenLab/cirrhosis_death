@@ -57,7 +57,8 @@ def diff_analysis(
 
 def binomtest(var: pd.Series,
               boolean_array: pd.Series,
-              alternative='two-sided') -> pd.DataFrame:
+              alternative='two-sided',
+              event_names: tuple[str, str] = ('event', 'no-event')) -> pd.DataFrame:
     entry = {}
     entry['variable'] = var.name
 
@@ -68,8 +69,6 @@ def binomtest(var: pd.Series,
     p_1 = var.loc[boolean_array].dropna().cat.codes.mean()
 
     p_0 = var.loc[~boolean_array].dropna().cat.codes.mean()
-    entry['no-event'] = dict(
-        count=var.loc[~boolean_array].value_counts().sum(), p=p_0)
     logger.debug(f"p cat==0: {p_0}, p cat==1: {p_1}")
 
     cat_at_pos_one = var.cat.categories[1]
@@ -78,7 +77,9 @@ def binomtest(var: pd.Series,
     counts = var.loc[boolean_array].value_counts()
     k, n = counts.loc[cat_at_pos_one], counts.sum()
 
-    entry['event'] = dict(count=n, p=p_1)
+    entry[event_names[0]] = dict(count=n, p=p_1)
+    entry[event_names[1]] = dict(
+        count=var.loc[~boolean_array].value_counts().sum(), p=p_0)
 
     test_res = scipy_binomtest(k, n, p_0, alternative=alternative)
     test_res = pd.Series(test_res.__dict__).to_frame('binomial test').unstack()

@@ -448,6 +448,25 @@ tab_targets_by_diagnosisPlace
 clinic = clinic.join(targets)
 
 # %% [markdown]
+# ## Censoring
+
+# %% [markdown]
+# FirstAdmission is also right-censored
+
+# %%
+time_from_inclusion_to_first_admission = clinic["DateFirstAdmission"].fillna(config.STUDY_ENDDATE) - clinic["DateInflSample"]
+time_from_inclusion_to_first_admission.describe()
+
+# %% [markdown]
+# Who dies without having a first Admission date?
+
+# %%
+dead_wo_adm = clinic["DateFirstAdmission"].isna() & clinic['dead']
+idx_dead_wo_adm = dead_wo_adm.loc[dead_wo_adm].index
+print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index)
+clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateInflSample", cols_clinic.LiverAdm180]]
+
+# %% [markdown]
 # ## Different overlaps
 #
 # - save persons with clinical data as potential validation cohort separately
