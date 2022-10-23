@@ -137,6 +137,7 @@ nodes = sklearn.tree.plot_tree(clf,
                                class_names=["False", "True", "none"],
                                filled=True,
                                ax=ax)
+fig.suptitle(f"Decision tree for endpoint {TARGET}", fontsize='xx-large')
 fig.tight_layout()
 fig.savefig(FOLDER / '2_decision_tree.pdf')
 
