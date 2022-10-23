@@ -419,10 +419,14 @@ for cutoff in [90, 180]:
     # targets[f'dead{cutoff:03}incl'] = (clinic["DaysToDeathFromInclusion"] <=
     #                                 cutoff).astype(int)
     targets[f'dead{cutoff:03}infl'] = (clinic["DaysToDeathFromInfl"] <=
-                                    cutoff).astype(int)
+                                       cutoff).astype(int)
+    targets[f"liverDead{cutoff:03}infl"] = (
+        clinic.loc[clinic["CauseOfDeath"] != 'NonLiver',
+                   "DaysToDeathFromInfl"] <= cutoff).astype(int)
+
 targets = pd.DataFrame(targets)
-targets = targets.join((clinic.loc[:, mask] > 0).astype(int).rename(
-    columns=target_name))
+targets = targets.join(
+    (clinic.loc[:, mask] > 0).astype(int).rename(columns=target_name))
 # targets = targets.sort_index(axis=1, ascending=False)
 targets.describe()
 
@@ -505,3 +509,8 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 clinic.to_pickle(config.fname_pkl_clinic)
 olink.to_pickle(config.fname_pkl_olink)
 targets.to_pickle(config.fname_pkl_targets)
+
+# %%
+clinic[targets.columns].describe()
+
+# %%

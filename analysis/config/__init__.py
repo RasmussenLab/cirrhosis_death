@@ -17,6 +17,6 @@ fname_pkl_targets = Path(data_processed) / 'targets.pkl'
 from . import clinic_data
 
 TARGETS = [
-    'dead090infl', 'dead180infl', 'hasAdm180', 'hasAdm90', 'hasLiverAdm90',
-    'hasLiverAdm180'
+    'dead090infl', 'dead180infl', 'liverDead090infl', 'liverDead180infl',
+    'hasAdm180', 'hasAdm90', 'hasLiverAdm90', 'hasLiverAdm180'
 ]

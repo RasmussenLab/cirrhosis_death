@@ -40,8 +40,8 @@ import config
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'dead090infl'
-TARGET = 'hasLiverAdm90'
+TARGET = 'liverDead090infl'
+# TARGET = 'hasLiverAdm90'
 FOLDER = ''
 
 # %%
@@ -82,13 +82,20 @@ clinic.loc[dead_wo_adm, ["DateFirstAdmission", "DateDiagnose"]]
 clinic
 
 # %%
-clinic[TARGET].value_counts()
+target_counts = clinic[TARGET].value_counts()
+
+if target_counts.sum() < len(clinic):
+    print(f"Target has missing values. Can only use {target_counts.sum()} of {len(clinic)} samples.")
+    mask = clinic[TARGET].notna()
+    clinic, olink = clinic.loc[mask], olink.loc[mask]
+    
+target_counts
 
 # %%
 pd.crosstab(clinic[TARGET], clinic["DecomensatedAtDiagnosis"])
 
 # %%
-y = clinic[TARGET].astype(bool)
+y = clinic[TARGET].astype(int) # NA is encoded as False for boolean type
 
 # %%
 y

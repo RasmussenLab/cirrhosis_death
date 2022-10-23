@@ -36,7 +36,7 @@ import config
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'hasAdm180'
+TARGET = 'liverDead090infl'
 FOLDER = ''
 
 # %%
@@ -48,6 +48,16 @@ if not FOLDER:
 clinic = pd.read_pickle(config.fname_pkl_clinic)
 cols_clinic = src.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(config.fname_pkl_olink)
+
+# %%
+target_counts = clinic[TARGET].value_counts()
+
+if target_counts.sum() < len(clinic):
+    print(f"Target has missing values. Can only use {target_counts.sum()} of {len(clinic)} samples.")
+    mask = clinic[TARGET].notna()
+    clinic, olink = clinic.loc[mask], olink.loc[mask]
+    
+target_counts
 
 # %%
 olink_scaled = StandardScaler().fit_transform(olink).fillna(0)
@@ -224,3 +234,5 @@ for model_pred_col, ax in zip(binary_labels.columns, axes.ravel()):
                              palette=[colors[0], colors[2], colors[1], colors[3]],
                              ax=ax)
     ax.set_title(model_pred_col)
+
+# %%
