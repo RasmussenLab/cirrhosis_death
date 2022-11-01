@@ -1,27 +1,31 @@
 from config import folder_reports
 from config import fname_pkl_clinic
 from config import fname_pkl_olink
+from config import fname_pkl_val_clinic
 from config import TARGETS
 
 print(folder_reports)
+
 
 rule all:
     input: 
         t= expand(
             ["{out_path}/{target}/1_explorative_analysis.ipynb",
-             "{out_path}/{target}/2_tree.ipynb"],
+             "{out_path}/{target}/2_tree.ipynb",
+             "{out_path}/{target}/clinic_train_val_comparison.html",],
             out_path=folder_reports,
             target=TARGETS),
         profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
-        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
+        profiling_report_olink=f"{folder_reports}/olink_data_profil.html"
 
-nb='0_load_raw_data.ipynb'
+nb='0_load_data_prodoc.ipynb'
 rule prepare_data:
     input:
         nb=nb
     output:
-        clinic_pkl=fname_pkl_clinic, 
-        olink_pkl=fname_pkl_olink,
+        clinic_pkl_train=fname_pkl_clinic, 
+        olink_pkl_train=fname_pkl_olink,
+        clinic_pkl_val=fname_pkl_val_clinic,
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
@@ -29,17 +33,33 @@ rule prepare_data:
         " && jupyter nbconvert {output.nb} --to html"
 
 
+
 rule profile_data:
     input:
-        clinic_pkl=fname_pkl_clinic, 
-        olink_pkl=fname_pkl_olink,
+        clinic_pkl_train=fname_pkl_clinic, 
+        olink_pkl_train=fname_pkl_olink,
     output:
         profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
         profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
     shell:
-        "pandas_profiling {input.clinic_pkl}  {output.profiling_report_clinic} -m"
-        " && pandas_profiling {input.olink_pkl}  {output.profiling_report_olink} -m"
+        "pandas_profiling {input.clinic_pkl_train}  {output.profiling_report_clinic} -m"
+        " && pandas_profiling {input.olink_pkl_train}  {output.profiling_report_olink} -m"
 
+nb="4_compare_splits.ipynb"
+rule compare_train_val:
+    input:
+        train=fname_pkl_clinic,
+        val=fname_pkl_val_clinic,
+        nb=nb
+    output:
+        sweetviz_report_splits_clinic="{out_path}/{target}/clinic_train_val_comparison.html",
+        nb="{out_path}/{target}"f"/{nb}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " -r fname_pkl_train {input.train}"
+        " -r fname_pkl_val {input.val}"
+        " -r TARGET {wildcards.target}"
+        " -r name_report clinic_train_val_comparison"
 
 nb='1_explorative_analysis.ipynb'
 rule analysis:

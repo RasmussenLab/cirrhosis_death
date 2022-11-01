@@ -512,5 +512,3 @@ targets.to_pickle(config.fname_pkl_targets)
 
 # %%
 clinic[targets.columns].describe()
-
-# %%
