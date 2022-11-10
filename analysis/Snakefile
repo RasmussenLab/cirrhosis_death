@@ -2,7 +2,9 @@ from config import folder_reports
 from config import fname_pkl_clinic
 from config import fname_pkl_olink
 from config import fname_pkl_val_clinic
+from config import fname_pkl_prodoc_olink
 from config import TARGETS
+
 
 print(folder_reports)
 
@@ -18,14 +20,34 @@ rule all:
         profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
         profiling_report_olink=f"{folder_reports}/olink_data_profil.html"
 
+
+
+nb="0_load_data_olink_validation.ipynb"
+rule validation_data:
+    input:
+        olink='Validation Results/ProDoc_Olink_bridged_QC.tsv',
+        metadata='Validation Results/metadata.tsv',
+        id_map='Validation Results/id.xlsx'
+    output:
+        olink_prodoc_val='olink_prodoc_val.xlsx',
+        olink_cflow='olink_cflow.xlsx',
+        nb=f"{folder_reports}/{nb}",
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
 nb='0_load_data_prodoc.ipynb'
 rule prepare_data:
     input:
-        nb=nb
+        nb=nb,
+        olink_prodoc_val='olink_prodoc_val.xlsx'
     output:
         clinic_pkl_train=fname_pkl_clinic, 
         olink_pkl_train=fname_pkl_olink,
         clinic_pkl_val=fname_pkl_val_clinic,
+        clinic_pkl_all=fname_pkl_prodoc_olink,
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"

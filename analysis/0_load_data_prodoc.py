@@ -18,13 +18,13 @@
 #
 # - prepare OLink and clinical data
 # - create views on data
-# - create targets: 
-#     
+# - create targets:
+#
 # event | next 90 days | next 180 days |
 # --- | --- | --- |
-# death | `dead90` | `dead180` | 
+# death | `dead90` | `dead180` |
 # admission to hospital | `adm90`  | `adm180` |
-#     
+#
 # all cases within 90 days will be included into the 180 days, from `incl`usion and from `infl`ammation sample time.
 
 # %%
@@ -55,6 +55,7 @@ config.STUDY_ENDDATE
 DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-09-28.xlsx'
 DATA_META = DATA_FOLDER / 'data_sheets.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
+DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
 
 # %% [markdown]
 # Load sheet `rename` from meta data and rename specified columns
@@ -84,6 +85,11 @@ cols_olink = src.pandas.get_colums_accessor(olink)
 # %%
 # olink
 olink.describe(datetime_is_numeric=True, include='all')
+
+# %%
+olink_val = pd.read_excel(DATA_OLINK_VAL, index_col=0)
+olink_val.index = olink_val.index.str[4:].str.replace(' ', '')
+olink_val
 
 # %% [markdown]
 # ## Dump feature names
@@ -174,7 +180,7 @@ fig.savefig(FOLDER_REPORTS / 'timing_deaths_over_time.pdf')
 # %% [markdown]
 # ### Clinic
 #
-# - [x] encode binary variables (yes, no) as `category`s 
+# - [x] encode binary variables (yes, no) as `category`s
 #   > Be aware that this might cause unexpected behaviour!
 
 # %% [markdown]
@@ -221,7 +227,7 @@ def get_dummies_yes_no(s, prefix=None):
         0: 'No',
         1: 'Yes'
     }).astype('category')
-    
+
 clinic = clinic.join(get_dummies_yes_no(clinic["DiagnosisPlace"]))
 clinic = clinic.join(get_dummies_yes_no(clinic["MaritalStatus"], prefix='MaritalStatus'))
 clinic = clinic.join(get_dummies_yes_no(clinic["CauseOfDeath"], prefix='CoD'))
@@ -265,7 +271,7 @@ olink = olink.loc[:,'IL8':]
 # - [ ] Imputation due to limit of detection (LOD) -> how to best impute
 
 # %%
-olink.loc[:, olink.isna().any()].describe() 
+olink.loc[:, olink.isna().any()].describe()
 
 # %% [markdown]
 # ## Timespans
@@ -341,7 +347,7 @@ clinic[cols_view].dtypes
 # fig.savefig(FOLDER_REPORTS / 'DaysFromInclToInflSample_scatter.pdf')
 
 # %% [markdown]
-# ## Kaplan-Meier survival plot 
+# ## Kaplan-Meier survival plot
 
 # %%
 kmf = KaplanMeierFitter()
@@ -484,6 +490,7 @@ idx_overlap
 # %%
 # in clinical data, but not in olink data
 idx_validation = clinic.index.difference(olink.index)
+idx_validation = idx_validation.intersection(olink_val.index)
 idx_validation
 
 # %%
@@ -497,7 +504,18 @@ olink.index.difference(clinic.index)
 clinic.loc[idx_validation].to_pickle(config.fname_pkl_val_clinic)
 
 # %% [markdown]
-# ## Dumped processed and selected data
+# ## Dump combined data for comparision
+idx_valid_proDoc = [*idx_overlap, *idx_validation]
+clinic = clinic.loc[idx_valid_proDoc]
+clinic[config.COMPARE_PRODOC] = clinic.index.isin(idx_validation).astype('float')
+clinic.to_pickle(config.fname_pkl_prodoc_clinic)
+olink = pd.concat(
+    [olink.loc[idx_overlap], olink_val.loc[idx_validation]])
+olink.to_pickle(config.fname_pkl_prodoc_olink)
+
+
+# %% [markdown]
+# ## Dumped processed and selected training data
 
 # %%
 clinic = clinic.loc[idx_overlap]
