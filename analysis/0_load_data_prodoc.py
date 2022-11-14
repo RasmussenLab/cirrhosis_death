@@ -505,6 +505,9 @@ clinic.loc[idx_validation].to_pickle(config.fname_pkl_val_clinic)
 
 # %% [markdown]
 # ## Dump combined data for comparision
+
+
+# %%
 idx_valid_proDoc = [*idx_overlap, *idx_validation]
 clinic = clinic.loc[idx_valid_proDoc]
 clinic[config.COMPARE_PRODOC] = clinic.index.isin(idx_validation).astype('float')

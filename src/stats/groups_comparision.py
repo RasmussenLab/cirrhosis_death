@@ -1,13 +1,12 @@
 import logging
+
 import numpy as np
 import pandas as pd
 import pingouin as pg
 import statsmodels
-
 from scipy.stats import binomtest as scipy_binomtest
 
 logger = logging.getLogger(__name__)
-
 
 def means_between_groups(
     df: pd.DataFrame,
@@ -152,10 +151,6 @@ def ancova_pg(df_long: pd.DataFrame,
         scores.append(ancova)
     scores = pd.concat(scores)
     scores['-Log10 pvalue'] = -np.log10(scores['p-unc'])
-    scores = scores[scores.Source != 'Residual']
-
-    #FDR correction
-    scores = add_fdr_scores(scores, random_seed=123)
     return scores
 
 
@@ -209,4 +204,10 @@ def ancova_per_feat(df_proteomics: pd.DataFrame,
                        dv=value_name,
                        between=target,
                        covar=covar)
+
+
+    scores = scores[scores.Source != 'Residual']
+
+    #FDR correction
+    scores = add_fdr_scores(scores, random_seed=123)
     return scores.set_index([feat_col, 'Source'])
