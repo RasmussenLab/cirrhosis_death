@@ -18,7 +18,7 @@
 
 # %%
 from pathlib import Path
-import warnings
+import logging
 
 import numpy as np
 import pandas as pd
@@ -43,13 +43,21 @@ TARGET = 'liverDead090infl'
 FOLDER = ''
 CLINIC=config.fname_pkl_clinic
 OLINK=config.fname_pkl_olink
-val_ids:str='' #List of comma separated values or filepath
+val_ids:str='' # List of comma separated values or filepath
+#
+clinic_cont=config.clinic_data.vars_cont # list or string of csv, eg. "var1,var2"
+clinic_binary=config.clinic_data.vars_binary # list or string of csv, eg. "var1,var2" 
+da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol' # List of comma separated values or filepath
 
 # %%
-# compare ProDoc train and validation split
-TARGET = 'is_valdiation_sample'
-CLINIC=config.fname_pkl_prodoc_clinic
-OLINK=config.fname_pkl_prodoc_olink
+# # compare ProDoc train and validation split
+# TARGET = 'is_valdiation_sample'
+# CLINIC=config.fname_pkl_prodoc_clinic
+# OLINK=config.fname_pkl_prodoc_olink
+# clinic_cont=('Age,IgM,IgG,IgA,Hgb,Leucocytes,Platelets,Bilirubin,Albumin,CRP,pp,INR,ALAT,MELD-score,MELD-Na,ChildPugh,')
+# clinic_binary=('Sex,EtiAlco,EtiFat,EtiHBV,EtiHCV,EtiPBC,EtiAIH,EtiMTX,EtiOther,EtiUnknown,DecomensatedAtDiagnosis,Ascites,EsoBleeding,HRS,HE,Icterus,SBP,'
+#                'Hypertension,HighCholesterol,Cancer,Depression,Psychiatric,Diabetes,InsulinDependent,Statins,NonselectBetaBlock'
+#                'dead090infl,dead180infl,liverDead090infl,liverDead180infl,hasAdm180,hasAdm90,hasLiverAdm90,hasLiverAdm180')
 
 # %%
 if not FOLDER:
@@ -64,6 +72,33 @@ olink = pd.read_pickle(OLINK)
 
 # %%
 pd.crosstab(clinic.DiagnosisPlace, clinic[TARGET], margins=True)
+
+
+# %%
+def join(l): return ','.join([str(x) for x in l])
+
+from typing import Union
+def check_isin_clinic(l:Union[list, str]):
+    """Remove item from passed list and warn."""
+    if isinstance(l, str):
+        l = l.split(',')
+    ret = list()
+    for _var in l:
+        if _var not in clinic.columns:
+            logging.warning(f"Desired variable not found: {_var}", stacklevel=0)
+            continue
+        ret.append(_var)
+    return ret
+
+# da_covar='Sex,Age,Cancer,missingvariable' # List of comma separated values or filepath
+covar = check_isin_clinic(da_covar)
+covar
+
+# %%
+config.clinic_data.vars_cont = check_isin_clinic(config.clinic_data.vars_cont)
+
+# %%
+config.clinic_data.vars_binary = check_isin_clinic(config.clinic_data.vars_binary)
 
 # %% [markdown]
 # # Differences between groups defined by target
@@ -162,14 +197,6 @@ with pd.option_context('display.max_rows', len(ana_diff_olink)):
 
 # %% [markdown]
 # ## Olink - controlled for with clinical covariates
-
-# %%
-covar = [cols_clinic.Sex, cols_clinic.Age, *config.clinic_data.comorbidities]
-for _var in covar:
-    if _var not in clinic.columns:
-        warnings.warn(f"Desired control variable not found: {_var}")
-        covar.remove(_var)
-covar
 
 # %%
 olink.columns.name = 'OlinkID'
