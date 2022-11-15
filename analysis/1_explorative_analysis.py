@@ -29,8 +29,9 @@ import sklearn
 from sklearn.metrics import precision_recall_curve, roc_curve
 
 import src
-from src.sklearn import run_pca, StandardScaler
-from src.sklearn.scoring import ConfusionMatrix
+import njab.plotting
+from njab.sklearn import run_pca, StandardScaler
+from njab.sklearn.scoring import ConfusionMatrix
 
 import config
 import njab
@@ -274,11 +275,11 @@ exp_var_olink["explained variance (cummulated)"] = exp_var_olink[
 exp_var_olink.index.name = 'PC'
 ax = exp_var_olink.plot()
 fig = ax.get_figure()
-src.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
+njab.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
 
 # %%
 ax = seaborn.scatterplot(x=PCs.iloc[:, 0],
                          y=PCs.iloc[:, 1],
                          hue=clinic[TARGET])
 fig = ax.get_figure()
-src.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')
+njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')

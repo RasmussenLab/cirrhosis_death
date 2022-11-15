@@ -26,9 +26,11 @@ import seaborn
 import sklearn
 from sklearn.metrics import precision_recall_curve, roc_curve
 
-import src.stats
-from src.sklearn import run_pca, StandardScaler
-from src.sklearn.scoring import ConfusionMatrix
+import njab.sklearn
+from njab.sklearn import run_pca, StandardScaler
+from njab.sklearn.scoring import ConfusionMatrix
+
+import src
 
 import config
 
@@ -216,7 +218,7 @@ binary_labels = pd.DataFrame()
 
 TRUE_COL = 'true'
 for model_pred_col in model_pred_cols:
-    binary_labels[model_pred_col] = predictions.apply(lambda x: src.sklearn.scoring.get_label_binary_classification(
+    binary_labels[model_pred_col] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x[TRUE_COL], x[model_pred_col]),
                       axis=1)
 binary_labels.sample(6)
@@ -234,5 +236,3 @@ for model_pred_col, ax in zip(binary_labels.columns, axes.ravel()):
                              palette=[colors[0], colors[2], colors[1], colors[3]],
                              ax=ax)
     ax.set_title(model_pred_col)
-
-# %%
