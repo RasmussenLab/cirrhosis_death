@@ -33,6 +33,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
 import numpy as np
 
 import seaborn as sns
@@ -52,7 +53,7 @@ list(DATA_FOLDER.iterdir())
 config.STUDY_ENDDATE
 
 # %%
-DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-09-28.xlsx'
+DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-11-17.xlsx'
 DATA_META = DATA_FOLDER / 'data_sheets.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
@@ -498,10 +499,23 @@ idx_validation
 olink.index.difference(clinic.index)
 
 # %% [markdown]
+# ## Save training cohort separately
+
+# %%
+DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
+
+clinic.loc[idx_overlap].to_pickle(config.fname_pkl_clinic)
+olink.loc[idx_overlap].to_pickle(config.fname_pkl_olink)
+
+# %% [markdown]
 # ## Save validation cohort separately
 
 # %%
 clinic.loc[idx_validation].to_pickle(config.fname_pkl_val_clinic)
+
+# %%
+# potentially save to yaml to be used elsewhere (or json)
+','.join(idx_validation)
 
 # %% [markdown]
 # ## Dump combined data for comparision
@@ -517,19 +531,54 @@ olink = pd.concat(
 olink.to_pickle(config.fname_pkl_prodoc_olink)
 
 
-# %% [markdown]
-# ## Dumped processed and selected training data
-
 # %%
-clinic = clinic.loc[idx_overlap]
-olink = olink.loc[idx_overlap]
-
-# %%
-DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
-
-clinic.to_pickle(config.fname_pkl_clinic)
-olink.to_pickle(config.fname_pkl_olink)
 targets.to_pickle(config.fname_pkl_targets)
+clinic[targets.columns].describe()
+
+# %% [markdown]
+# ## Dumped combined clinical data as numeric data for ML applications
 
 # %%
-clinic[targets.columns].describe()
+cols_cat = clinic.dtypes == 'category'
+cols_cat = clinic.columns[cols_cat]
+clinic[cols_cat]
+
+# %%
+encode = {**{k:1 for k in ['Yes', 'yes', 'Male']},
+          **{k:0 for k in ['No', 'no', 'Female']}}
+encode
+
+# %%
+clinic[cols_cat] = clinic[cols_cat].astype('object').replace(encode)
+clinic[cols_cat]
+
+# %%
+clinic[cols_cat].describe()
+
+# %% [markdown]
+# The martial status was made into three dummy variables before (see above):
+# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship, MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
+
+# %%
+mask = clinic.dtypes == 'object'
+clinic.loc[:, mask]
+
+# %%
+mask = clinic.dtypes == 'datetime64[ns]'
+clinic.loc[:,mask]
+
+# %%
+numeric_cols = (clinic.apply(pd.api.types.is_numeric_dtype))
+numeric_cols = clinic.columns[numeric_cols]
+clinic[numeric_cols]
+
+# %%
+clinic[numeric_cols].dtypes.value_counts()
+
+# %%
+to_drop = ["Study ID"]
+clinic[numeric_cols].drop(to_drop, axis=1)
+
+# %%
+clinic[numeric_cols].drop(to_drop, axis=1).to_pickle(config.fname_pkl_prodoc_clinic_num)
+config.fname_pkl_prodoc_clinic_num
