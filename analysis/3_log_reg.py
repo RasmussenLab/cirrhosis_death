@@ -50,17 +50,14 @@ import config
 # %% tags=["parameters"]
 TARGET:str = 'liverDead180infl' # target column in CLINIC data
 CLINIC:Path = config.fname_pkl_prodoc_clinic_num # clinic numeric pickled, can contain missing
-feat_clinic:list = config.clinic_data.comorbidities + config.clinic_data.vars_cont # ToDo: make string
+# feat_clinic:list = config.clinic_data.comorbidities + config.clinic_data.vars_cont # ToDo: make string
 OLINK:Path = config.fname_pkl_prodoc_olink # olink numeric pickled, can contain missing
+# X_numeric: Path
+feat_set_to_consider:str='CLINIC_AND_OLINK'
 VAL_IDS: str = ''  #
 use_val_split = True
-FOLDER = 'reports/dev'
+FOLDER = ''
 
-# %%
-if not FOLDER:
-    FOLDER = Path(config.folder_reports) / TARGET
-    FOLDER.mkdir(exist_ok=True, parents=True)
-FOLDER
 
 # %%
 clinic = pd.read_pickle(CLINIC)
@@ -118,9 +115,15 @@ VAL_IDS
 #
 
 # %%
-predictors = feat_clinic + olink.columns.to_list()
-model_name = 'combined LR'
-X = clinic[feat_clinic].join(olink)
+if feat_set_to_consider not in config.feat_sets:
+    raise ValueError(f"Choose one of the available sets: {', '.join(config.feat_sets.keys())}")
+feat_to_consider = config.feat_sets[feat_set_to_consider].split(',')
+feat_to_consider
+
+# %%
+# predictors = feat_clinic + olink.columns.to_list()
+model_name = feat_set_to_consider
+X = clinic.join(olink)[feat_to_consider]
 X
 
 # %%
@@ -138,6 +141,12 @@ if VAL_IDS:
     y_val = y.loc[VAL_IDS]
     y = y.drop(VAL_IDS)
 
+
+# %%
+if not FOLDER:
+    FOLDER = Path(config.folder_reports) / TARGET / feat_set_to_consider
+    FOLDER.mkdir(exist_ok=True, parents=True)
+FOLDER
 
 # %% [markdown]
 # ### Collect test predictions
