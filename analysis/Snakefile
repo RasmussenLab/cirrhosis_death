@@ -15,17 +15,18 @@ FOLDER_REPORTS = Path(project_config.folder_reports)
 
 rule all:
     input: 
-        t= expand(
+        expand(
             ["{out_path}/{target}/1_explorative_analysis.ipynb",
              "{out_path}/{target}/2_tree.ipynb",
              "{out_path}/{target}/clinic_train_val_comparison.html",],
             out_path=folder_reports,
             target=TARGETS),
-        models = expand(
+        expand(
             "{out_path}/{target}/{feat_sets}/3_log_reg.ipynb",
             out_path=folder_reports,
             target=TARGETS,
             feat_sets=project_config.feat_sets),
+        f"{folder_reports}/prodoc_train_val"f"/1_explorative_analysis.ipynb",
         profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
         profiling_report_olink=f"{folder_reports}/olink_data_profil.html"
 
@@ -98,19 +99,35 @@ rule compare_train_val:
         " -r name_report clinic_train_val_comparison"
 
 nb='1_explorative_analysis.ipynb'
-rule analysis:
+rule differential_analysis:
     input:
-        fname_pkl_olink,
-        fname_pkl_clinic,
+        olink=fname_pkl_olink,
+        clinic=fname_pkl_clinic,
         nb=nb
     output:
         nb="{out_path}/{target}"f"/{nb}"
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
+        " -r CLINIC {input.clinic}"
+        " -r OLINK {input.olink}"
         " -r TARGET {wildcards.target}"
         " && jupyter nbconvert {output.nb} --to html"
 
+rule differential_analysis_splits:
+    input:
+        olink=project_config.fname_pkl_prodoc_olink,
+        clinic=project_config.fname_pkl_prodoc_clinic,
+        nb=nb
+    output:
+        nb=f"{folder_reports}/prodoc_train_val"f"/{nb}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " -r CLINIC {input.clinic}"
+        " -r OLINK {input.olink}"
+        f" -r TARGET {project_config.COMPARE_PRODOC}"
+        " && jupyter nbconvert {output.nb} --to html"
 
 nb='2_tree.ipynb'
 rule decision_tree:
