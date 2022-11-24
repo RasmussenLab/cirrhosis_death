@@ -52,8 +52,8 @@ list(DATA_FOLDER.iterdir())
 
 config.STUDY_ENDDATE
 
-# %%
-DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-11-17.xlsx'
+# %% tags=["parameters"]
+DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-11-24.xlsx'
 DATA_META = DATA_FOLDER / 'data_sheets.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
 DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
@@ -172,6 +172,11 @@ ax.plot([min_date, max_date],
         [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
         'k-', lw=1)
 _ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
+delta=360
+ax.plot([min_date, max_date],
+        [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
+        'k-', lw=1)
+_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
 fig = ax.get_figure()
 fig.savefig(FOLDER_REPORTS / 'timing_deaths_over_time.pdf')
 
@@ -189,6 +194,9 @@ fig.savefig(FOLDER_REPORTS / 'timing_deaths_over_time.pdf')
 
 # %%
 clinic.loc[:, clinic.columns.str.contains("Adm")].describe()
+
+# %%
+clinic.loc[:, clinic.columns.str.contains("Adm")].sum()
 
 # %%
 # fill missing Admissions with zero, and make it an integer
