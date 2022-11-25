@@ -3,6 +3,7 @@ import logging
 from logging import NullHandler
 
 logging.getLogger(__name__).addHandler(NullHandler())
+import src.io
 import src.plotting
 import src.pandas
 from .plotting import savefig

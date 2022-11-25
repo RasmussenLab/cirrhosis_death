@@ -54,7 +54,6 @@ rule prepare_data:
         nb=nb,
         olink_prodoc_val='olink_prodoc_val.xlsx',
         DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-11-24.xlsx',
-        DATA_META = DATA_FOLDER / 'data_sheets.xlsx',
         DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
         DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
     output:
