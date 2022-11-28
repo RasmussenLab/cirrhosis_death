@@ -1,4 +1,5 @@
 import collections.abc
+import logging
 import numbers
 
 from collections import namedtuple
@@ -334,3 +335,12 @@ def get_last_index_matching_proportion(df_counts: pd.DataFrame,
     mask = df_counts[prop_col] > prop
     idx_cutoff = df_counts[prop_col].loc[mask].tail(1).index[0]
     return idx_cutoff
+
+
+def get_overlapping_columns(df: pd.DataFrame, cols_expected: list) -> list:
+    ret = df.columns.intersection(cols_expected)
+    diff = pd.Index(cols_expected).difference(df.columns)
+    if not diff.empty:
+        logging.warning(
+            f"Some columns are requested, but missing: {diff.to_list()}")
+    return ret.to_list()
