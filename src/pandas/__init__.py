@@ -39,6 +39,13 @@ def combine_value_counts(X: pd.DataFrame, dropna=True) -> pd.DataFrame:
     return freq_targets
 
 
+def value_counts_with_margins(y: pd.Series) -> pd.DataFrame:
+    ret = y.value_counts().to_frame('counts')
+    ret.index.name = y.name
+    ret['prop'] = y.value_counts(normalize=True)
+    return ret
+
+
 def counts_with_proportion(s: pd.Series) -> pd.DataFrame:
     """Counts with proportion of counts(!). 
     

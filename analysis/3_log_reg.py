@@ -35,7 +35,8 @@ from njab.sklearn import StandardScaler
 from njab.sklearn import pca as njab_pca
 from njab.sklearn.scoring import ConfusionMatrix
 from njab.sklearn.types import Splits
-from njab.plotting.metrics import plot_split_auc, plot_split_prc
+from njab.plotting.metrics import plot_auc, plot_prc
+from njab.sklearn.scoring import get_score, get_pred, get_target_count_per_bin
 
 import src
 
@@ -48,16 +49,20 @@ import config
 # - [ ] allow feature selection based on requested variables
 
 # %% tags=["parameters"]
-TARGET:str = 'liverDead180infl' # target column in CLINIC data
+TARGET:str = 'dead180infl' # target column in CLINIC data
 CLINIC:Path = config.fname_pkl_prodoc_clinic_num # clinic numeric pickled, can contain missing
 # feat_clinic:list = config.clinic_data.comorbidities + config.clinic_data.vars_cont # ToDo: make string
 OLINK:Path = config.fname_pkl_prodoc_olink # olink numeric pickled, can contain missing
 # X_numeric: Path
-feat_set_to_consider:str='CLINIC_AND_OLINK'
+feat_set_to_consider:str='OLINK_AND_CLINIC'
+n_features_max:int = 10
 VAL_IDS: str = ''  #
 use_val_split = True
 FOLDER = ''
 
+# %% [markdown]
+# # Setup
+# ## Load data
 
 # %%
 clinic = pd.read_pickle(CLINIC)
@@ -68,13 +73,7 @@ olink = pd.read_pickle(OLINK)
 # %% [markdown]
 # ## Target
 # %%
-def value_counts_with_margins(y:pd.Series):
-    ret = y.value_counts().to_frame('counts')
-    ret.index.name = y.name
-    ret['prop']  = y.value_counts(normalize=True)
-    return ret
-
-value_counts_with_margins(clinic[TARGET])
+src.pandas.value_counts_with_margins(clinic[TARGET])
 
 # %%
 target_counts = clinic[TARGET].value_counts()
@@ -91,7 +90,7 @@ y = clinic[TARGET]
 target_counts
 
 # %% [markdown]
-# # Data Splits
+# # Test IDs
 
 # %%
 olink_val, clinic_val = None, None
@@ -110,8 +109,8 @@ if use_val_split:
         raise ValueError("Provide IDs in csv format as str: 'ID1,ID2'")
 VAL_IDS
 
-# %% [markdown] tags=[]
-# ## Combine dataset
+# %% [markdown]
+# ## Combine clinical and olink data
 #
 
 # %%
@@ -125,6 +124,9 @@ feat_to_consider
 model_name = feat_set_to_consider
 X = clinic.join(olink)[feat_to_consider]
 X
+
+# %% [markdown]
+# ## Data Splits -> train and test split
 
 # %%
 if VAL_IDS:
@@ -142,6 +144,10 @@ if VAL_IDS:
     y = y.drop(VAL_IDS)
 
 
+# %% [markdown]
+# ## Output folder
+
+
 # %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET / feat_set_to_consider
@@ -149,13 +155,22 @@ if not FOLDER:
 FOLDER
 
 # %% [markdown]
-# ### Collect test predictions
+# Outputs
+
+# %%
+# out
+files_out = {}
+files_out['3_log_reg.xlsx'] = FOLDER / '3_log_reg.xlsx'
+writer = pd.ExcelWriter(files_out['3_log_reg.xlsx'])
+
+# %% [markdown]
+# ## Collect test predictions
 
 # %%
 predictions = y_val.to_frame('true')
 
 # %% [markdown]
-# ## Deal with missing values globally
+# ## Deal with missing values globally - impute
 
 # %%
 feat_w_missings = X.isna().sum()
@@ -202,6 +217,9 @@ weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y)
 
 # %% [markdown]
 # ## Logistic Regression
+# Procedure:
+# 1. Select best set of features from entire feature set selected using CV on train split
+# 2. Retrain best model configuration using entire train split and evalute on test split
 
 # %%
 # X_all = 
@@ -227,16 +245,18 @@ cv_feat = njab.sklearn.find_n_best_features(
     model=sklearn.linear_model.LogisticRegression(),
     name=TARGET,
     groups=y,
-    n_features_max=10,
+    n_features_max=n_features_max,
     fit_params=dict(sample_weight=weights)
 )
 cv_feat = cv_feat.groupby('n_features').agg(['mean', 'std'])
+cv_feat.to_excel(writer, 'CV')
 cv_feat
 
 # %%
 mask = cv_feat.columns.levels[0].str[:4] == 'test'
 scores_cols =  cv_feat.columns.levels[0][mask]
 n_feat_best = cv_feat.loc[:, pd.IndexSlice[scores_cols, 'mean']].idxmax()
+n_feat_best.to_excel(writer, 'n_feat_best')
 n_feat_best
 
 # %%
@@ -251,25 +271,14 @@ results_model.name = model_name
 
 
 # %%
-def plot_auc(results, ax=None, **kwargs):
-    if ax is None:
-        fig, ax = plt.subplots(1,1, **kwargs)
-    ax = plot_split_auc(results.train,  f"{results.name} (train)", ax)
-    ax = plot_split_auc(results.test, f"{results.name} (test)", ax)
-    return ax
-
 ax = plot_auc(results_model, figsize=(4,2))
-
+files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
 # %%
-def plot_prc(results, ax=None, **kwargs):
-    if ax is None:
-        fig, ax = plt.subplots(1,1, **kwargs)
-    ax = plot_split_prc(results.train,  f"{results.name} (train)", ax)
-    ax = plot_split_prc(results.test, f"{results.name} (test)", ax)
-    return ax
-
 ax = plot_prc(results_model, figsize=(4,2))
+files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
 # %%
 # https://www.statsmodels.org/dev/discretemod.html
@@ -283,38 +292,30 @@ X[results_model.selected_features].head()
 
 
 # %%
-def get_score(clf, X, pos=1):
-    ret = clf.predict_proba(X)[:,pos]
-    ret = pd.Series(ret, index=X.index)
-    return ret
-
-def get_pred(clf, X):
-    ret = clf.predict(X)
-    ret = pd.Series(ret, index=X.index)
-    return ret
-
+N_BINS = 20
 score = get_score(clf=results_model.model, X=X[results_model.selected_features], pos=1)
-ax = score.hist(bins=20)
+ax = score.hist(bins=N_BINS)
+files_out['hist_score_train.pdf'] = FOLDER / 'hist_score_train.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train.pdf'])
 
 # %%
 # score_val
-
-N_BINS = 10
-def get_target_count_per_bin(score, y, n_bins=N_BINS):
-    pred_bins = pd.DataFrame({'score':pd.cut(score, bins=list(x/N_BINS for x in range(0,N_BINS+1))), 'y==1':y})
-    pred_bins = pred_bins.groupby(by='score').sum().astype(int)
-    return pred_bins
-
-pred_bins = get_target_count_per_bin(score, y)    
-pred_bins.plot(kind='bar', ylabel='count')
+pred_bins = get_target_count_per_bin(score, y, n_bins=N_BINS)    
+ax = pred_bins.plot(kind='bar', ylabel='count')
+files_out['hist_score_train_target.pdf'] = FOLDER / 'hist_score_train_target.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 pred_bins
 
 # %%
 score_val = get_score(clf=results_model.model, X=X_val[results_model.selected_features], pos=1)
 predictions['score'] = score_val
-ax = score_val.hist(bins=20)
+ax = score_val.hist(bins=N_BINS)
+files_out['hist_score_test.pdf'] = FOLDER / 'hist_score_test.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test.pdf'])
 pred_bins_val = get_target_count_per_bin(score_val, y_val)    
-pred_bins_val.plot(kind='bar', ylabel='count')
+ax = pred_bins_val.plot(kind='bar', ylabel='count')
+files_out['hist_score_test_target.pdf'] = FOLDER / 'hist_score_test_target.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 pred_bins_val
 
 # %% [markdown]
@@ -324,10 +325,13 @@ pred_bins_val
 y_pred_val = get_pred(clf=results_model.model, X=X_val[results_model.selected_features])
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
-ConfusionMatrix(y_val, y_pred_val).as_dataframe
+_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+_.to_excel(writer, "CM_test")
 
 # %%
-predictions.sort_values('score', ascending=False)
+predictions = predictions.sort_values('score', ascending=False)
+predictions.to_excel(writer, 'pred_test')
+predictions
 
 # %% [markdown]
 # ## Multiplicative decompositon
@@ -335,6 +339,7 @@ predictions.sort_values('score', ascending=False)
 # %%
 components = X[results_model.selected_features].multiply(results_model.model.coef_)
 components['intercept'] = float(results_model.model.intercept_)
+np.exp(components).to_excel(writer, 'decomp_multiplicative_train')
 np.exp(components)
 
 # # prediction is row entries multiplied (note: numerial instability of multiplications)
@@ -348,37 +353,34 @@ pivot = pivot.join(clinic.dead.astype(int))
 pivot.describe().iloc[:2]
 
 # %%
-pd.pivot_table(pivot, values='pred', index=TARGET, columns='dead', aggfunc='sum')
+pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
+pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
+
 
 # %%
-pd.pivot_table(pivot, values='dead', index=TARGET, columns='pred', aggfunc='sum')
-
-# %%
-pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
-
+writer.close()
+files_out
 # %% [markdown]
 # ### Without weights, but adapting cutoff
 #
 # - [ ] use when no weights are used
 
 # %%
-log_reg = sklearn.linear_model.LogisticRegression()
-log_reg = log_reg.fit(X=X, y=y, sample_weight=None)
-
-y_prob = log_reg.predict_proba(X)[:,1]
-
-# %%
-fpr, tpr, cutoffs = roc_curve(y, y_prob)
-roc = pd.DataFrame([fpr, tpr, cutoffs], index='fpr tpr cutoffs'.split())
-ax = roc.T.plot('fpr', 'tpr')
+results_model = njab.sklearn.run_model(
+    splits,
+    model=sklearn.linear_model.LogisticRegression(random_state=44),
+    n_feat_to_select=int(n_feat_best.mode()),
+    fit_params=None,
+)
+results_model.name = model_name
 
 # %%
-precision, recall, cutoffs = precision_recall_curve(y, y_prob)
-prc = pd.DataFrame([precision, recall, cutoffs], index='precision recall cutoffs'.split())
+ax = plot_auc(results_model, figsize=(4,2))
+ax = plot_prc(results_model, figsize=(4,2))
+
+# %%
+prc = pd.DataFrame(results_model.train.prc, index='precision recall cutoffs'.split())
 prc
-
-# %%
-ax = prc.T.plot('recall', 'precision', ylabel='precision')
 
 # %%
 prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (1/prc.loc['precision'] + 1/prc.loc['recall'])
@@ -386,9 +388,8 @@ f1_max = prc[prc.loc['f1_score'].argmax()]
 f1_max
 
 # %%
+y_prob = get_score(results_model.model, X[results_model.selected_features])
 y_pred = pd.Series((y_prob > f1_max.loc['cutoffs']), index=X.index).astype(int)
-
-predictions['5 PCs (LR)'] = y_pred
 
 ConfusionMatrix(y, y_pred).as_dataframe # this needs to be augmented with information if patient died by now (to see who is "wrongly classified)")
 
@@ -409,7 +410,7 @@ pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
 # ## Plot TP, TN, FP and FN on PCA plot
 
 # %%
-model_pred_cols = predictions.columns[1:5].to_list()
+model_pred_cols = predictions.columns[2:3].to_list()
 model_pred_cols
 
 # %%
@@ -435,5 +436,3 @@ colors
 #                              palette=[colors[0], colors[2], colors[1], colors[3]],
 #                              ax=ax)
 #     ax.set_title(model_pred_col)
-
-# %%
