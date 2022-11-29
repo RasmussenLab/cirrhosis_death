@@ -6,7 +6,6 @@ logging.getLogger(__name__).addHandler(NullHandler())
 import src.io
 import src.plotting
 import src.pandas
-from .plotting import savefig
 
 # put into some pandas_cfg.py file and import all
 import pandas as pd
@@ -23,7 +22,6 @@ class IntArrayFormatter(pf.GenericArrayFormatter):
 pd.options.display.float_format = '{:,.3f}'.format
 pf.IntArrayFormatter = IntArrayFormatter
 
-plotting.make_large_descriptors()
 
 
 # Load config
