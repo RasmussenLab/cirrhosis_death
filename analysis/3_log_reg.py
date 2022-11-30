@@ -55,10 +55,13 @@ CLINIC:Path = config.fname_pkl_prodoc_clinic_num # clinic numeric pickled, can c
 OLINK:Path = config.fname_pkl_prodoc_olink # olink numeric pickled, can contain missing
 # X_numeric: Path
 feat_set_to_consider:str='OLINK_AND_CLINIC'
-n_features_max:int = 10
+n_features_max:int = 15
 VAL_IDS: str = ''  #
-use_val_split = True
+weights:bool = True
 FOLDER = ''
+
+# %%
+# weights = False
 
 # %% [markdown]
 # # Setup
@@ -94,19 +97,18 @@ target_counts
 
 # %%
 olink_val, clinic_val = None, None
-if use_val_split:
-    if not VAL_IDS:
-        logging.warning("Create train and test split.")
-        _, VAL_IDS = sklearn.model_selection.train_test_split(
-            clinic.index,
-            test_size=0.2,
-            random_state=123,
-            stratify=clinic[TARGET])
-        VAL_IDS = list(VAL_IDS)
-    elif isinstance(VAL_IDS, str):
-        VAL_IDS = VAL_IDS.split(",")
-    else:
-        raise ValueError("Provide IDs in csv format as str: 'ID1,ID2'")
+if not VAL_IDS:
+    logging.warning("Create train and test split.")
+    _, VAL_IDS = sklearn.model_selection.train_test_split(
+        clinic.index,
+        test_size=0.2,
+        random_state=123,
+        stratify=clinic[TARGET])
+    VAL_IDS = list(VAL_IDS)
+elif isinstance(VAL_IDS, str):
+    VAL_IDS = VAL_IDS.split(",")
+else:
+    raise ValueError("Provide IDs in csv format as str: 'ID1,ID2'")
 VAL_IDS
 
 # %% [markdown]
@@ -185,7 +187,7 @@ X_val = njab.sklearn.transform_DataFrame(X_val, median_imputer.transform)
 
 
 # %%
-X.isna().sum()
+assert X.isna().sum().sum()  == 0
 
 # %% [markdown]
 # ## Principal Components
@@ -213,30 +215,18 @@ X.isna().sum()
 # cols_base_model = [cols_clinic.Age, cols_clinic.DecomensatedAtDiagnosis, cols_clinic.MELD_score] # MELD score -> death
 
 # %%
-weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y)
+if weights:
+    weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y)
+    cutoff=0.5
+else:
+    cutoff=None
+    weights=None
 
 # %% [markdown]
 # ## Logistic Regression
 # Procedure:
 # 1. Select best set of features from entire feature set selected using CV on train split
 # 2. Retrain best model configuration using entire train split and evalute on test split
-
-# %%
-# X_all = 
-# X = X_all[include]
-
-# X = olink
-# X_val = olink_val
-# model_name = 'olink LR'
-
-# X = clinic[feat_clinic]
-# X_val = clinic_val[feat_clinic]
-# model_name = 'clinic LR'
-
-# %%
-# X = clinic[feat_clinic].join(olink)
-# X_val = clinic_val[feat_clinic].join(olink_val)
-
 
 # %%
 cv_feat = njab.sklearn.find_n_best_features(
@@ -264,7 +254,8 @@ splits = Splits(X_train=X, X_test=X_val, y_train=y, y_test=y_val)
 results_model = njab.sklearn.run_model(
     splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
-    n_feat_to_select=int(n_feat_best.mode()),
+    n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
+    # n_feat_to_select=int(n_feat_best.mode()),
     fit_params=dict(sample_weight=weights)
 )
 results_model.name = model_name
@@ -285,10 +276,12 @@ njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 np.exp(results_model.model.coef_)
 
 # %%
-X[results_model.selected_features].describe()
+des_selected_feat = X[results_model.selected_features].describe()
+des_selected_feat.to_excel(writer, 'sel_feat')
+des_selected_feat
 
-# %%
-X[results_model.selected_features].head()
+# %% [markdown]
+# Plot training data scores
 
 
 # %%
@@ -304,47 +297,98 @@ pred_bins = get_target_count_per_bin(score, y, n_bins=N_BINS)
 ax = pred_bins.plot(kind='bar', ylabel='count')
 files_out['hist_score_train_target.pdf'] = FOLDER / 'hist_score_train_target.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
-pred_bins
+# pred_bins
+
+# %% [markdown]
+# Test data scores
 
 # %%
 score_val = get_score(clf=results_model.model, X=X_val[results_model.selected_features], pos=1)
 predictions['score'] = score_val
-ax = score_val.hist(bins=N_BINS)
+ax = score_val.hist(bins=N_BINS) # list(x/N_BINS for x in range(0,N_BINS)))
+ax.set_ylabel('count')
+ax.set_xlim(0,1)
 files_out['hist_score_test.pdf'] = FOLDER / 'hist_score_test.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test.pdf'])
-pred_bins_val = get_target_count_per_bin(score_val, y_val)    
+pred_bins_val = get_target_count_per_bin(score_val, y_val, n_bins=N_BINS)    
 ax = pred_bins_val.plot(kind='bar', ylabel='count')
+ax.locator_params(axis='y', integer=True)
 files_out['hist_score_test_target.pdf'] = FOLDER / 'hist_score_test_target.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
-pred_bins_val
+# pred_bins_val
 
 # %% [markdown]
 # ## Performance evaluations
 
 # %%
-y_pred_val = get_pred(clf=results_model.model, X=X_val[results_model.selected_features])
+prc = pd.DataFrame(results_model.train.prc, index='precision recall cutoffs'.split())
+prc
+
+# %%
+prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (1/prc.loc['precision'] + 1/prc.loc['recall'])
+f1_max = prc[prc.loc['f1_score'].argmax()]
+f1_max
+
+# %% [markdown]
+# Cutoff set
+
+# %%
+cutoff = float(f1_max.loc['cutoffs'])
+cutoff
+
+# %%
+y_pred_val = njab.sklearn.scoring.get_custom_pred(
+    clf=results_model.model,
+    X=X_val[results_model.selected_features],
+    cutoff=cutoff)
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-_.to_excel(writer, "CM_test")
+# _.to_excel(writer, "CM_test")
+_
 
 # %%
-predictions = predictions.sort_values('score', ascending=False)
-predictions.to_excel(writer, 'pred_test')
-predictions
+y_pred_val = njab.sklearn.scoring.get_custom_pred(
+    clf=results_model.model,
+    X=X_val[results_model.selected_features],
+    cutoff=0.5)
+predictions[model_name] = y_pred_val
+predictions['dead'] = clinic['dead']
+_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+# _.to_excel(writer, "CM_test")
+_
+
+# %%
+y_pred_val = get_pred(clf=results_model.model,
+                      X=X_val[results_model.selected_features])
+predictions[model_name] = y_pred_val
+predictions['dead'] = clinic['dead']
+_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+# _.to_excel(writer, "CM_test")
+_
+
 
 # %% [markdown]
 # ## Multiplicative decompositon
 
 # %%
-components = X[results_model.selected_features].multiply(results_model.model.coef_)
-components['intercept'] = float(results_model.model.intercept_)
-np.exp(components).to_excel(writer, 'decomp_multiplicative_train')
-np.exp(components)
+def get_lr_multiplicative_decomposition(results, X, score, y):
+    components = X[results.selected_features].multiply(results.model.coef_)
+    components['intercept'] = float(results.model.intercept_)
+    components = np.exp(components)
+    components['score'] = score
+    components[TARGET]  = y
+    components = components.sort_values('score', ascending=False)
+    return components
 
-# # prediction is row entries multiplied (note: numerial instability of multiplications)
-# import functools
-# np.exp(components).apply(lambda s: functools.reduce(np.multiply, s), axis=1)
+components = get_lr_multiplicative_decomposition(results=results_model, X=X, score=score, y=y)
+components.to_excel(writer, 'decomp_multiplicative_train')
+components.head(10)
+
+# %%
+components_test = get_lr_multiplicative_decomposition(results=results_model, X=X_val, score=score_val, y=y_val)
+components_test.to_excel(writer, 'decomp_multiplicative_test')
+components_test.head(10)
 
 # %%
 pivot = y.to_frame()
@@ -361,67 +405,15 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 writer.close()
 files_out
 # %% [markdown]
-# ### Without weights, but adapting cutoff
-#
-# - [ ] use when no weights are used
-
-# %%
-results_model = njab.sklearn.run_model(
-    splits,
-    model=sklearn.linear_model.LogisticRegression(random_state=44),
-    n_feat_to_select=int(n_feat_best.mode()),
-    fit_params=None,
-)
-results_model.name = model_name
-
-# %%
-ax = plot_auc(results_model, figsize=(4,2))
-ax = plot_prc(results_model, figsize=(4,2))
-
-# %%
-prc = pd.DataFrame(results_model.train.prc, index='precision recall cutoffs'.split())
-prc
-
-# %%
-prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (1/prc.loc['precision'] + 1/prc.loc['recall'])
-f1_max = prc[prc.loc['f1_score'].argmax()]
-f1_max
-
-# %%
-y_prob = get_score(results_model.model, X[results_model.selected_features])
-y_pred = pd.Series((y_prob > f1_max.loc['cutoffs']), index=X.index).astype(int)
-
-ConfusionMatrix(y, y_pred).as_dataframe # this needs to be augmented with information if patient died by now (to see who is "wrongly classified)")
-
-# %%
-pivot = y_pred.to_frame('pred').join(y).join(clinic.dead.astype(int))
-pivot.describe().iloc[:2]
-
-# %% [markdown]
-# How many will die for those who have been predicted to die?
-
-# %%
-pd.pivot_table(pivot, values='pred', index=TARGET, columns='dead', aggfunc='sum')
-
-# %%
-pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
-
-# %% [markdown]
 # ## Plot TP, TN, FP and FN on PCA plot
 
 # %%
-model_pred_cols = predictions.columns[2:3].to_list()
-model_pred_cols
-
-# %%
-binary_labels = pd.DataFrame()
-
-TRUE_COL = 'true'
-for model_pred_col in model_pred_cols:
-    binary_labels[model_pred_col] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
-        x[TRUE_COL], x[model_pred_col]),
+predictions['label'] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
+        x['true'], x[model_name]),
                       axis=1)
-binary_labels.sample(6)
+
+mask = predictions[['true', model_name]].sum(axis=1).astype(bool)
+predictions.loc[mask].sort_values('score', ascending=False)
 
 # %%
 colors = seaborn.color_palette(n_colors=4)
