@@ -49,8 +49,8 @@ measure_olink
 # Load Olink validation data
 
 # %%
-inputs['olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC.tsv"
-olink = pd.read_table(inputs['olink'])
+inputs['olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
+olink = pd.read_table(inputs['olink'], sep='\t', low_memory=False)
 olink = olink.set_index(measure_olink.idx)
 olink
 

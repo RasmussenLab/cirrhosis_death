@@ -42,9 +42,10 @@ files_out=dict()
 config.STUDY_ENDDATE
 
 # %%
-DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.xlsx'
+DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx'
 DATA_OLINK = DATA_FOLDER / 'olink_cflow.pkl'
 DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv"
+DATA_KEYS_UPDATE = DATA_FOLDER /  "Validation Results" / 'cflow_id_update.xlsx'
 
 
 # %%
@@ -53,7 +54,7 @@ olink = pd.read_pickle(DATA_OLINK)
 
 # %%
 clinic = clinic.rename(config.circaflow_data.rename_dict, axis=1)
-clinic = clinic.set_index('ID')
+# clinic = clinic.set_index('ID')
 print('Rename:',
 {k: v for k, v in config.circaflow_data.rename_dict.items() if k!=v}
 )
@@ -62,28 +63,101 @@ print('Rename:',
 # Find overlapping samples between keys, olink and clinic
 
 # %%
-# Cflow10018 -> ID had a unknown character
-sample_keys = pd.read_csv(DATA_KEYS, sep=';', index_col='SampleID')
-in_olink = olink.index.intersection(sample_keys.index)
-sample_keys = sample_keys.loc[in_olink].reset_index().set_index('ID')
-in_clinic = sample_keys.index.intersection(clinic.index)
+sample_keys = pd.read_csv(DATA_KEYS, sep=';', index_col='ID')
+idx_not_unique = sample_keys.index.value_counts() > 1
+idx_not_unique = idx_not_unique.loc[idx_not_unique].index
+duplicates = sample_keys.loc[idx_not_unique]
+duplicates
+
+# %%
+sample_keys.loc[duplicates.index.unique()]
+
+# %%
+sample_keys_update = pd.read_excel(DATA_KEYS_UPDATE, index_col=0)
+sample_keys_update
+
+# %%
+rename_id = sample_keys_update.dropna()['ID'].to_dict()
+sample_keys = sample_keys.rename(rename_id)
+
+# %%
+clinic.insert(2, "Projekt ID", clinic.pop("Projekt ID"))
+id_cols = ['SampleID', 'ID', 'Projekt ID']
+clinic[id_cols] = clinic[id_cols].astype(str)
+clinic.sample(3)
+
+# %%
+mask_all_equal = (clinic['SampleID'] == clinic['ID'] ) & (clinic['ID'] == clinic['Projekt ID'])
+clinic.loc[~mask_all_equal]
+
+# %%
+olink.sample(3)
+
+# %%
+in_olink = olink.index.intersection(sample_keys['SampleID'])
+in_olink
+
+# %%
+in_clinic = sample_keys.index.intersection(clinic['ID'])
+in_clinic
+
+# %%
+assert set(in_clinic) == set(in_clinic.union(sample_keys.index.intersection(clinic['SampleID'])))
+
+# %%
+to_add = sample_keys.index.intersection(clinic['Projekt ID']).difference(in_clinic)
+to_add
+
+# %% [markdown]
+# Replace `ID` with machting `Projekt ID`, then add to `in_clinc`
+
+# %%
+mask = clinic['Projekt ID'].isin(to_add)
+clinic.loc[mask, 'ID'] = clinic.loc[mask, 'Projekt ID']
+
+in_clinic = in_clinic.union(to_add)
+
+# %%
+clinic = clinic.set_index('ID')
+
+# %%
 diff_clinic_olink = clinic.index.difference(sample_keys.index)
 diff_olink_clinic = sample_keys.index.difference(clinic.index)
 len(in_clinic), len(diff_clinic_olink)
 
 # %%
+files_out['diff_clinic_olink'] = FOLDER_REPORTS / 'diff_clinic_olink.xlsx'
+clinic.loc[diff_clinic_olink].to_excel(files_out['diff_clinic_olink'])
 clinic.loc[diff_clinic_olink]
 
+
+# %%
+cflow_to_find = sample_keys.index.difference(in_clinic)
+cflow_to_find = sample_keys.loc[cflow_to_find, 'SampleID']
+cflow_to_find = cflow_to_find.loc[cflow_to_find.squeeze().str.contains('Cflow')]
+if not cflow_to_find.empty:
+    files_out['cflow_to_find'] = FOLDER_REPORTS / 'cflow_to_find.xlsx'
+    display(files_out['cflow_to_find'])
+    cflow_to_find.to_excel(files_out['cflow_to_find'])
+cflow_to_find
+
 # %% [markdown]
-# - remove duplicates, i.e. if a clincal samples has more than one OLink sample
+# Remove duplicates, i.e. if a clincal samples has more than one OLink sample (as highlighted above)
 
 # %%
 in_both = sample_keys.loc[in_clinic, 'SampleID'].index.drop_duplicates(keep=False)
+len(in_both)
+
+# %%
+in_both
 
 # %%
 clinic = clinic.loc[in_both]
 olink = olink.loc[sample_keys.loc[in_both, 'SampleID']]
 clinic.shape, olink.shape
+
+# %% [markdown]
+# Set `SampleID` as new index for clinical data
 
 # %%
 clinic['CflowID'] = sample_keys.loc[in_both, 'SampleID']
@@ -136,9 +210,6 @@ ax.invert_yaxis()
 files_out['lifelines'] = FOLDER_REPORTS/ 'lifelines.pdf'
 fig.savefig(files_out['lifelines'])
 # %%
-
-
-# %%
 clinic.dead.value_counts()
 
 # %%
@@ -163,31 +234,32 @@ fig.savefig(files_out['death_vs_alive_diagonose_dates'])
 # %%
 ax = clinic.astype({
     'dead': 'category'
-}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", rot=45, sharex=False)
+}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", rot=45, s=3, sharex=False)
 # ticks = ax.get_xticks()
 # ax.set_xticklabels(ax.get_xticklabels(),  horizontalalignment='right')
 # ax.set_xticks(ticks)
+fontsize = 'xx-small'
 min_date, max_date = clinic["DateInflSample"].min(), clinic["DateInflSample"].max()
 ax.plot([min_date, max_date],
         [min_date, max_date],
-        'k-', lw=2)
-_ = ax.annotate('date', [min_date, min_date + datetime.timedelta(days=20)], rotation=25)
+        'k-', lw=1)
+_ = ax.annotate('date', [min_date, min_date + datetime.timedelta(days=20)], fontsize=fontsize, rotation=25)
 offset, rot = 20 , 25
 delta=90
 _ = ax.plot([min_date, max_date],
         [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
         'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
+_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
 delta=180
 ax.plot([min_date, max_date],
         [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
         'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
+_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
 delta=360
 ax.plot([min_date, max_date],
         [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
         'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], rotation=25)
+_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
 fig = ax.get_figure()
 files_out['timing_deaths_over_time'] = FOLDER_REPORTS / 'timing_deaths_over_time.pdf'
 fig.savefig(files_out['timing_deaths_over_time'])
@@ -214,8 +286,6 @@ clinic.loc[:, clinic.columns.str.contains("Adm")].sum()
 # Encode binary variables
 
 # %%
-# binary variables
-# vars_binary = config.clinic_data.vars_binary
 clinic[vars_binary].head()
 
 # %%
@@ -260,7 +330,6 @@ etiology_mask_yes.sum(axis=1).value_counts()
 clinic["EtiNonAlco"] = (clinic["EtiAlco"] == 'No') & (etiology_mask_yes.drop('EtiAlco', axis=1).sum(axis=1).astype(bool))
 clinic["EtiNonAlco"] = get_dummies_yes_no(clinic["EtiNonAlco"])[True]
 clinic["EtiNonAlco"].value_counts()
-# %%
 # %% [markdown]
 # ### Olink
 #
@@ -277,7 +346,6 @@ olink.head()
 
 # %%
 olink.loc[:, olink.isna().any()].describe()
-# %%
 # %% [markdown]
 # ## Timespans
 #
@@ -285,15 +353,14 @@ olink.loc[:, olink.isna().any()].describe()
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
 #
 # First some cleaning
-#
-# clinic["DateAdm"]  = clinic["DateAdm"].replace({'None': np.nan, 'MORS': np.nan})
+
+
+# %%
+clinic["DateAdm"]  = clinic["DateAdm"].replace({'None': np.nan, 'MORS': np.nan})
 
 
 # %% [markdown]
 # For these individuals, the admission time is censored as the persons died before.
-
-# %% [markdown]
-#
 
 # %%
 clinic["DaysToAdmFromInflSample"] = (
@@ -448,7 +515,7 @@ clinic.loc[dead_wo_adm, ["DateAdm", "DateInflSample", cols_clinic.LiverAdm180, "
 DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 files_out[config.fname_pkl_cirkaflow_clinic.stem] = config.fname_pkl_cirkaflow_clinic
 files_out[config.fname_pkl_cirkaflow_olink.stem] = config.fname_pkl_cirkaflow_olink
-clinic.loc[idx_overlap].to_pickle(config.fname_pkl_cirkaflow_clinic)
-olink.loc[idx_overlap].to_pickle(config.fname_pkl_cirkaflow_olink)
+clinic.to_pickle(config.fname_pkl_cirkaflow_clinic)
+olink.to_pickle(config.fname_pkl_cirkaflow_olink)
 # %%
 files_out
