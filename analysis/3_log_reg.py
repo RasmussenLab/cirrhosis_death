@@ -16,6 +16,7 @@
 # # Logistic regression model
 
 # %%
+import itertools
 import logging
 from pathlib import Path
 
@@ -197,15 +198,25 @@ assert X.isna().sum().sum()  == 0
 # - binary features do not strictly need to be normalized
 
 # %%
-# on X
-# scaler = StandardScaler()
-# olink_scaled = scaler.fit_transform(olink).fillna(0)
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
-# PCs, pca = njab_pca.run_pca(olink, n_components=None)
-# njab_pca.plot_explained_variance(pca)
-# PCs.iloc[:10, :10]
+PCs, pca = njab_pca.run_pca(X_scaled, n_components=None)
+files_out["var_explained_by_PCs.pdf"] = FOLDER / "var_explained_by_PCs.pdf"
+ax = njab_pca.plot_explained_variance(pca)
+ax.locator_params(axis='x', integer=True)
+njab.plotting.savefig(ax.get_figure(), files_out["var_explained_by_PCs.pdf"])
+X_scaled.shape
 
 # %%
+files_out['scatter_first_5PCs.pdf'] = FOLDER / 'scatter_first_5PCs.pdf'
+
+fig, axes = plt.subplots(5, 2, figsize=(8.3, 11.7), layout='constrained')
+PCs = PCs.join(y.astype('category'))
+for(i,j), ax in zip(itertools.combinations(range(5), 2), axes.flatten()):
+    PCs.plot.scatter(i, j, c=TARGET, cmap='Paired', ax=ax)
+_ = PCs.pop(TARGET)
+njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
 
 # %% [markdown]
 # ## Baseline Model - Logistic Regression 
