@@ -25,6 +25,7 @@ import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
+from heatmap import heatmap, corrplot
 
 import sklearn
 import sklearn.impute
@@ -61,7 +62,7 @@ weights:bool = True
 FOLDER = ''
 
 # %%
-# weights = False
+weights = False
 
 # %% [markdown]
 # # Setup
@@ -204,6 +205,8 @@ assert X.isna().sum().sum()  == 0
 # njab_pca.plot_explained_variance(pca)
 # PCs.iloc[:10, :10]
 
+# %%
+
 # %% [markdown]
 # ## Baseline Model - Logistic Regression 
 # - `age`, `decompensated`, `MELD-score`
@@ -239,13 +242,14 @@ cv_feat = njab.sklearn.find_n_best_features(
     fit_params=dict(sample_weight=weights)
 )
 cv_feat = cv_feat.groupby('n_features').agg(['mean', 'std'])
-cv_feat.to_excel(writer, 'CV')
+cv_feat.to_excel(writer, 'CV', float_format='%.3f')
 cv_feat
 
 # %%
 mask = cv_feat.columns.levels[0].str[:4] == 'test'
 scores_cols =  cv_feat.columns.levels[0][mask]
 n_feat_best = cv_feat.loc[:, pd.IndexSlice[scores_cols, 'mean']].idxmax()
+n_feat_best.name = 'best'
 n_feat_best.to_excel(writer, 'n_feat_best')
 n_feat_best
 
@@ -268,8 +272,8 @@ njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
 # %%
 ax = plot_prc(results_model, figsize=(4,2))
-files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
-njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
+files_out['PRAUC'] = FOLDER / 'plot_prauc.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 
 # %%
 # https://www.statsmodels.org/dev/discretemod.html
@@ -277,8 +281,15 @@ np.exp(results_model.model.coef_)
 
 # %%
 des_selected_feat = X[results_model.selected_features].describe()
-des_selected_feat.to_excel(writer, 'sel_feat')
+des_selected_feat.to_excel(writer, 'sel_feat', float_format='%.3f')
 des_selected_feat
+
+# %%
+fig = plt.figure(figsize=(5,5,))
+files_out['corr_plot_train.pdf'] = FOLDER / 'corr_plot_train.pdf' 
+_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=80);
+fig.tight_layout()
+njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %% [markdown]
 # Plot training data scores
@@ -383,11 +394,13 @@ def get_lr_multiplicative_decomposition(results, X, score, y):
 
 components = get_lr_multiplicative_decomposition(results=results_model, X=X, score=score, y=y)
 components.to_excel(writer, 'decomp_multiplicative_train')
+components.to_excel(writer, 'decomp_multiplicative_train_view', float_format='%.3f')
 components.head(10)
 
 # %%
 components_test = get_lr_multiplicative_decomposition(results=results_model, X=X_val, score=score_val, y=y_val)
 components_test.to_excel(writer, 'decomp_multiplicative_test')
+components_test.to_excel(writer, 'decomp_multiplicative_test_view', float_format='%.3f')
 components_test.head(10)
 
 # %%
