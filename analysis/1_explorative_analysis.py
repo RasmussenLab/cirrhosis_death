@@ -17,6 +17,7 @@
 # # Explorative Analysis
 
 # %%
+from functools import partial
 from pathlib import Path
 import logging
 
@@ -40,10 +41,10 @@ import njab
 # # Set parameters
 
 # %% tags=["parameters"]
-TARGET = 'liverDead090infl'
+TARGET = 'dead180infl'
 FOLDER = ''
-CLINIC=config.fname_pkl_clinic
-OLINK=config.fname_pkl_olink
+CLINIC=config.fname_pkl_prodoc_clinic
+OLINK=config.fname_pkl_prodoc_olink
 val_ids:str='' # List of comma separated values or filepath
 #
 clinic_cont=config.clinic_data.vars_cont # list or string of csv, eg. "var1,var2"
@@ -51,19 +52,16 @@ clinic_binary=config.clinic_data.vars_binary # list or string of csv, eg. "var1,
 da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol' # List of comma separated values or filepath
 
 # %%
-# # compare ProDoc train and validation split
-# TARGET = 'is_valdiation_sample'
-# CLINIC=config.fname_pkl_prodoc_clinic
-# OLINK=config.fname_pkl_prodoc_olink
-# clinic_cont=('Age,IgM,IgG,IgA,Hgb,Leucocytes,Platelets,Bilirubin,Albumin,CRP,pp,INR,ALAT,MELD-score,MELD-Na,ChildPugh,')
-# clinic_binary=('Sex,EtiAlco,EtiFat,EtiHBV,EtiHCV,EtiPBC,EtiAIH,EtiMTX,EtiOther,EtiUnknown,DecomensatedAtDiagnosis,Ascites,EsoBleeding,HRS,HE,Icterus,SBP,'
-#                'Hypertension,HighCholesterol,Cancer,Depression,Psychiatric,Diabetes,InsulinDependent,Statins,NonselectBetaBlock'
-#                'dead090infl,dead180infl,liverDead090infl,liverDead180infl,hasAdm180,hasAdm90,hasLiverAdm90,hasLiverAdm180')
+# TARGET = 'dead180infl'
+# # TARGET = 'hasLiverAdm180'
+# FOLDER = Path(config.folder_reports) / f'DA_{CLINIC.stem}' / TARGET
+# CLINIC = config.fname_pkl_cirkaflow_clinic
+# OLINK = config.fname_pkl_cirkaflow_olink
 
 # %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
-    FOLDER.mkdir(exist_ok=True, parents=True)
+FOLDER.mkdir(exist_ok=True, parents=True)
 FOLDER
 
 # %%
@@ -72,34 +70,20 @@ cols_clinic = src.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
 # %%
-pd.crosstab(clinic.DiagnosisPlace, clinic[TARGET], margins=True)
-
+# pd.crosstab(clinic.DiagnosisPlace, clinic[TARGET], margins=True)
 
 # %%
-def join(l): return ','.join([str(x) for x in l])
-
-from typing import Union
-def check_isin_clinic(l:Union[list, str]):
-    """Remove item from passed list and warn."""
-    if isinstance(l, str):
-        l = l.split(',')
-    ret = list()
-    for _var in l:
-        if _var not in clinic.columns:
-            logging.warning(f"Desired variable not found: {_var}", stacklevel=0)
-            continue
-        ret.append(_var)
-    return ret
-
-# da_covar='Sex,Age,Cancer,missingvariable' # List of comma separated values or filepath
+check_isin_clinic = partial(src.pandas.col_isin_df, df=clinic)
 covar = check_isin_clinic(da_covar)
 covar
 
 # %%
-config.clinic_data.vars_cont = check_isin_clinic(config.clinic_data.vars_cont)
+vars_cont = check_isin_clinic(config.clinic_data.vars_cont)
+vars_cont
 
 # %%
-config.clinic_data.vars_binary = check_isin_clinic(config.clinic_data.vars_binary)
+vars_binary = check_isin_clinic(config.clinic_data.vars_binary)
+vars_binary
 
 # %% [markdown]
 # # Differences between groups defined by target
@@ -120,7 +104,7 @@ if target_counts.sum() < len(clinic):
 target_counts
 
 # %%
-pd.crosstab(clinic[TARGET], clinic["DecomensatedAtDiagnosis"])
+# pd.crosstab(clinic[TARGET], clinic["DecomensatedAtDiagnosis"])
 
 # %%
 happend = clinic[TARGET].astype(bool)
@@ -144,7 +128,7 @@ ana_differential = njab.stats.groups_comparision.diff_analysis(
 ana_differential = ana_differential.sort_values(('ttest', 'p-val'))
 
 writer = pd.ExcelWriter(FOLDER / '1_differential_analysis.xlsx')
-ana_differential.to_excel(writer, "clinic continous")
+ana_differential.to_excel(writer, "clinic continous", float_format='%.4f')
 
 ana_differential
 
@@ -152,7 +136,11 @@ ana_differential
 # ## Binary
 
 # %%
-clinic[config.clinic_data.vars_binary].describe()
+clinic[vars_binary].describe()
+
+# %%
+vars_binary_created = check_isin_clinic(config.clinic_data.vars_binary_created)
+clinic[vars_binary_created].describe()
 
 # %% [markdown]
 # Might focus on discriminative power of
@@ -163,19 +151,18 @@ clinic[config.clinic_data.vars_binary].describe()
 
 # %%
 diff_binomial = []
-for var in config.clinic_data.vars_binary[1:]:
-    diff_binomial.append(
-        njab.stats.groups_comparision.binomtest(clinic[var],
+for var in vars_binary[1:] + vars_binary_created:
+    if len(clinic[var].cat.categories) == 2:
+        diff_binomial.append(
+            njab.stats.groups_comparision.binomtest(clinic[var],
                             happend,
                             event_names=(TARGET, 'no-event')))
-for var in config.clinic_data.vars_binary_created:
-    diff_binomial.append(
-        njab.stats.groups_comparision.binomtest(clinic[var],
-                            happend,
-                            event_names=(TARGET, 'no-event')))
+    else:
+        logging.warning(f"Non-binary variable: {var} with {len(clinic[var].cat.categories)} categories")
+
 diff_binomial = pd.concat(diff_binomial).sort_values(
     ('binomial test', 'pvalue'))
-diff_binomial.to_excel(writer, 'clinic binary')
+diff_binomial.to_excel(writer, 'clinic binary', float_format='%.4f')
 with pd.option_context('display.max_rows', len(diff_binomial)):
     display(diff_binomial)
 
@@ -191,9 +178,10 @@ ana_diff_olink = njab.stats.groups_comparision.diff_analysis(olink,
                                          event_names=(TARGET,
                                                       'no-event')).sort_values(
                                                           ('ttest', 'p-val'))
-ana_diff_olink.to_excel(writer, "olink simple")
-with pd.option_context('display.max_rows', len(ana_diff_olink)):
-    display(ana_diff_olink)
+ana_diff_olink.to_excel(writer, "olink simple", float_format='%.4f')
+# with pd.option_context('display.max_rows', len(ana_diff_olink)):
+    # display(ana_diff_olink)
+ana_diff_olink.head(20)
 
 
 # %% [markdown]
@@ -205,28 +193,42 @@ olink.columns.name = 'OlinkID'
 # %%
 clinic_ancova = [TARGET, *covar]
 clinic_ancova = clinic[clinic_ancova].copy()
+clinic_ancova.describe(include='all')
+
+# %%
 clinic_ancova = clinic_ancova.dropna(
 )  # for now discard all rows with a missing feature
 categorical_columns = clinic_ancova.columns[clinic_ancova.dtypes == 'category']
-print(categorical_columns)
+print("Available covariates", ", ".join(categorical_columns.to_list()))
 for categorical_column in categorical_columns:
     # only works if no NA and only binary variables!
     clinic_ancova[categorical_column] = clinic_ancova[
         categorical_column].cat.codes
-clinic_ancova.describe()
+    
+desc_ancova = clinic_ancova.describe()
+desc_ancova
 
 # %%
-ancova = njab.stats.ancova.AncovaOnlyTarget(df_proteomics=olink, df_clinic=clinic_ancova, target=TARGET, covar=covar)
-ancova = ancova.ancova().sort_values('qvalue')
+if (desc_ancova.loc['std'] < 0.001).sum():
+    non_varying = desc_ancova.loc['std'] < 0.001
+    non_varying = non_varying[non_varying].index
+    print("Non varying columns: ", ', '.join(non_varying))
+    clinic_ancova = clinic_ancova.drop(non_varying, axis=1)
+    for col in non_varying:
+        covar.remove(col)
+
+# %%
+ancova = njab.stats.ancova.AncovaOnlyTarget(df_proteomics=olink.loc[clinic_ancova.index], df_clinic=clinic_ancova, target=TARGET, covar=covar)
+ancova = ancova.ancova().sort_values('p-unc')
 ancova = ancova.loc[:, "p-unc":]
 ancova.columns = pd.MultiIndex.from_product([['ancova'], ancova.columns],
                                          names=('test', 'var'))
-ancova.to_excel(writer, "olink controlled")
+ancova.to_excel(writer, "olink controlled", float_format='%.4f')
 ancova.head(20)
 
 # %%
-ana_diff_olink = ana_diff_olink.join(ancova.reset_index(level=-1, drop=True))
-ana_diff_olink.to_excel(writer, "olink DA")
+ana_diff_olink = ana_diff_olink.join(ancova.reset_index(level=-1, drop=True)).sort_values(('ancova', 'p-unc'))
+ana_diff_olink.to_excel(writer, "olink DA", float_format='%.4f')
 ana_diff_olink
 
 # %%
@@ -283,3 +285,6 @@ ax = seaborn.scatterplot(x=PCs.iloc[:, 0],
                          hue=clinic[TARGET])
 fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')
+
+# %%
+#umap

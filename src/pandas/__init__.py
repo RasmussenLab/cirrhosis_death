@@ -107,6 +107,18 @@ def get_unique_non_unique_columns(df: pd.DataFrame) -> SimpleNamespace:
     return columns
 
 
+def col_isin_df(l:typing.Union[list, str], df):
+    """Remove item from passed list and warn."""
+    if isinstance(l, str):
+        l = l.split(',')
+    ret = list()
+    for _var in l:
+        if _var not in df.columns:
+            logging.warning(f"Desired variable not found: {_var}", stacklevel=0)
+            continue
+        ret.append(_var)
+    return ret
+
 def prop_unique_index(df: pd.DataFrame) -> pd.DataFrame:
     counts = df.index.value_counts()
     prop = (counts > 1).sum() / len(counts)
