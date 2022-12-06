@@ -18,6 +18,7 @@ dependencies:
   - matplotlib
   - plotly
   - seaborn
+  - umap-learn
   # - graphviz
   - python-graphviz
   # ML, stats

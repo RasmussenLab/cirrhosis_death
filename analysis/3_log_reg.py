@@ -219,6 +219,21 @@ _ = PCs.pop(TARGET)
 njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
 
 # %% [markdown]
+# ## UMAP
+
+# %%
+import umap
+reducer = umap.UMAP()
+embedding = reducer.fit_transform(X_scaled)
+
+# %%
+files_out['umap.pdf'] = FOLDER / 'umap.pdf'
+
+embedding = pd.DataFrame(embedding, index=X_scaled.index, columns=['UMAP 1', 'UMAP 2']).join(y.astype('category'))
+ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
+njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
+
+# %% [markdown]
 # ## Baseline Model - Logistic Regression 
 # - `age`, `decompensated`, `MELD-score`
 # - use weigthing to counter class imbalances
@@ -366,7 +381,7 @@ y_pred_val = njab.sklearn.scoring.get_custom_pred(
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-# _.to_excel(writer, "CM_test")
+_.to_excel(writer, f"CM_test_cutoff_{cutoff:.3f}")
 _
 
 # %%
@@ -386,7 +401,7 @@ y_pred_val = get_pred(clf=results_model.model,
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-# _.to_excel(writer, "CM_test")
+_.to_excel(writer, "CM_test_cutoff_0.5")
 _
 
 
@@ -427,7 +442,6 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 # %%
 writer.close()
-files_out
 # %% [markdown]
 # ## Plot TP, TN, FP and FN on PCA plot
 
@@ -440,15 +454,40 @@ mask = predictions[['true', model_name]].sum(axis=1).astype(bool)
 predictions.loc[mask].sort_values('score', ascending=False)
 
 # %%
+X_val_scaled = scaler.transform(X_val)
+PCs_val = pd.DataFrame(pca.transform(X_val_scaled), index=X_val.index, columns=PCs.columns)
+PCs_val
+
+# %%
+pred_train = y.to_frame('true').join(get_pred(results_model.model, X[results_model.selected_features]).rename(model_name))
+pred_train['label'] = pred_train.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
+        x['true'], x[model_name]),
+                      axis=1)
+pred_train.sample(5)
+
+# %%
 colors = seaborn.color_palette(n_colors=4)
 colors
 
 # %%
-# import matplotlib.pyplot as plt
-# fig, axes = plt.subplots(3,1, figsize=(10,20), sharex=True, sharey=True)
-# for model_pred_col, ax in zip(binary_labels.columns, axes.ravel()):
-#     ax = seaborn.scatterplot(x=PCs.iloc[:,0], y=PCs.iloc[:, 1], hue=binary_labels[model_pred_col], hue_order=['TN', 'TP', 'FN', 'FP'],
-#                              # palette=colors,
-#                              palette=[colors[0], colors[2], colors[1], colors[3]],
-#                              ax=ax)
-#     ax.set_title(model_pred_col)
+fig, axes = plt.subplots(1,2, figsize=(8,4), sharex=True, sharey=True)
+for _pcs, ax, _title, _model_pred_label in zip([PCs, PCs_val],
+                                                axes,
+                                                ['train', 'test'],
+                                                [pred_train['label'], predictions['label']]
+    ):
+    ax = seaborn.scatterplot(x=_pcs.iloc[:,0], y=_pcs.iloc[:, 1],
+                             hue=_model_pred_label,
+                             hue_order=['TN', 'TP', 'FN', 'FP'],
+                             palette=[colors[0], colors[2], colors[1], colors[3]],
+                             ax=ax)
+    ax.set_title(_title)
+
+files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
+njab.plotting.savefig(fig, files_out['pred_pca_labeled'])
+
+# %% [markdown]
+# ## Outputs
+
+# %%
+files_out
