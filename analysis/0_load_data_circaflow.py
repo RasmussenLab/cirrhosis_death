@@ -27,6 +27,8 @@ import seaborn as sns
 
 from lifelines import KaplanMeierFitter
 
+import njab.plotting
+from njab.plotting import savefig
 import src
 
 import config
@@ -181,15 +183,33 @@ clinic.loc[:,clinic.dtypes == 'object']
 # %%
 clinic["cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH, 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri"].value_counts()
 
+# %% [markdown]
+# Drop duplicate columns
+
 # %%
-clinic = clinic.dropna(subset=['DateInflSample'])
 if not clinic.columns.is_unique:
+    print(f"Duplicated: {clinic.columns[clinic.columns.duplicated()]}")
     keep = ~clinic.columns.duplicated()
     clinic = clinic.loc[:, keep]
-clinic
+clinic.sample(3)
 
 # %% [markdown]
-# ## Deaths over time
+# ## Discard healthy samples
+
+# %%
+clinic["Healthy"].value_counts(dropna=False)
+
+# %%
+mask = clinic["Healthy"] == 'No'
+clinic, olink = clinic.loc[mask], olink.loc[mask]
+clinic.shape, olink.shape
+
+# %%
+mask = clinic["DateInflSample"].isna()
+clinic.loc[mask] if mask.sum() else "All included samples have an inflammation sample date"
+
+# %% [markdown]
+# ## DeathHealthyer time
 #
 # - one plot with absolute time axis
 # - one plot relative to diagnosis date
@@ -202,13 +222,15 @@ clinic["DateDeath"] = clinic["DateDeath"].fillna(value=config.STUDY_ENDDATE)
 
 # %%
 din_a4 = (8.27 * 2, 11.69 * 2)
-fig, ax = plt.subplots(figsize=din_a4)
+njab.plotting.make_large_descriptors(32)
 
+fig, ax = plt.subplots(figsize=din_a4)
 src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'), start_col='DateInflSample', ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
+njab.plotting.set_font_sizes('x-small')
 files_out['lifelines'] = FOLDER_REPORTS/ 'lifelines.pdf'
-fig.savefig(files_out['lifelines'])
+savefig(fig, files_out['lifelines'])
 # %%
 clinic.dead.value_counts()
 
@@ -226,15 +248,15 @@ ax.set_yticks([])
 ax = clinic.loc[~clinic.dead].astype({
     'dead': 'category'
 }).plot.scatter(x="DateInflSample", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
-_ = fig.suptitle("Inclusion date by survival status", fontsize=22)
+_ = fig.suptitle("Inclusion date by survival status")
 files_out['death_vs_alive_diagonose_dates'] = FOLDER_REPORTS / 'death_vs_alive_diagonose_dates'
-fig.savefig(files_out['death_vs_alive_diagonose_dates'])
+savefig(fig, files_out['death_vs_alive_diagonose_dates'])
 
 
 # %%
 ax = clinic.astype({
     'dead': 'category'
-}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", rot=45, s=3, sharex=False)
+}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", cmap='Paired', rot=45, s=3, sharex=False)
 # ticks = ax.get_xticks()
 # ax.set_xticklabels(ax.get_xticklabels(),  horizontalalignment='right')
 # ax.set_xticks(ticks)
@@ -262,7 +284,7 @@ ax.plot([min_date, max_date],
 _ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
 fig = ax.get_figure()
 files_out['timing_deaths_over_time'] = FOLDER_REPORTS / 'timing_deaths_over_time.pdf'
-fig.savefig(files_out['timing_deaths_over_time'])
+savefig(fig, files_out['timing_deaths_over_time'])
 
 # %% [markdown]
 # ## Cleanup steps
@@ -407,7 +429,7 @@ ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 files_out['km_plot_death'] = FOLDER_REPORTS / 'km_plot_death.pdf'
-fig.savefig(files_out['km_plot_death'])
+savefig(fig, files_out['km_plot_death'])
 
 # %%
 clinic['Cause of Death (labels)'] = clinic['CauseOfDeath'].fillna('NA')
@@ -416,8 +438,9 @@ _ = sns.catplot(x="DaysToDeathFromInfl",
                 # hue="DiagnosisPlace",
                 hue='Cause of Death (labels)',
                 data=clinic.astype({'dead': 'category'}),
-                height=4,
-                aspect=3)
+                # height=4,
+                # aspect=3
+               )
 _.set_xlabels('Days from inflammation sample to death or until study end')
 ax = _.fig.get_axes()[0]
 ylim = ax.get_ylim()
@@ -425,15 +448,24 @@ ax.vlines(90, *ylim)
 ax.vlines(180, *ylim)
 fig = ax.get_figure()
 files_out['deaths_along_time'] = FOLDER_REPORTS / 'deaths_along_time.pdf'
-fig.savefig(files_out['deaths_along_time'])
+savefig(fig, files_out['deaths_along_time'])
 
 
 # %% [markdown]
 # ## KP plot admissions
+#
+# - some die before they have a first admission. We exclude these here
+
+# %%
+clinic["LiverAdm180"].value_counts(dropna=False).sort_index()
 
 # %%
 kmf = KaplanMeierFitter()
-kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["LiverAdm180"].fillna(0))
+
+mask = clinic["LiverAdm180"].notna()
+print(f"Based on {mask.sum()} patients")
+# kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["LiverAdm180"].fillna(0))
+kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "LiverAdm180"])
 
 
 fig, ax = plt.subplots()
@@ -448,7 +480,7 @@ _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 fig = ax.get_figure()
 files_out['km_plot_admission'] = FOLDER_REPORTS / 'km_plot_admission.pdf'
-fig.savefig(files_out['km_plot_admission'])
+savefig(fig, files_out['km_plot_admission'])
 
 # %% [markdown]
 # ## Targets
