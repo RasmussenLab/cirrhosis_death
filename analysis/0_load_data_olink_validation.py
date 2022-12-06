@@ -29,7 +29,7 @@ import pandas as pd
 import config
 
 # %% [markdown]
-# Set default paths and collection
+# ## Set default paths and collection
 
 # %%
 DATA_FOLDER = Path(config.data)
@@ -38,7 +38,7 @@ inputs = {}
 outputs = {}
 
 # %% [markdown]
-# Define Measurment
+# ## Define Measurment
 
 # %%
 Measurement = namedtuple('Measurment', 'idx measure')
@@ -46,7 +46,7 @@ measure_olink = Measurement(['SampleID', 'Assay'], 'NPX')
 measure_olink
 
 # %% [markdown]
-# Load Olink validation data
+# ## Load Olink validation data
 
 # %%
 inputs['olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
@@ -55,14 +55,20 @@ olink = olink.set_index(measure_olink.idx)
 olink
 
 # %% [markdown]
-# Contains duplicated for bridging samples
+# ## Contains duplicated bridging samples
 
 # %%
 duplicated = olink[measure_olink.measure].index.duplicated(keep=False)
-olink.loc[duplicated].sort_index(level=-1).head(20)
+olink_bridge = olink.loc[duplicated].sort_index(level=-1).set_index('Project', append=True)
+olink_bridge.head(20)
+
+# %%
+outputs['bridging_samples'] = config.data_processed / 'bridges.pkl'
+olink_bridge.to_pickle(outputs['bridging_samples'])
+olink_bridge.to_excel(outputs['bridging_samples'].with_suffix('.xlsx'))
 
 # %% [markdown]
-# Metadata for Olink features
+# ## Metadata for Olink features
 #
 # - `UniProt` ID of `OlinkID`
 # - limit of detection (`LOD`)
@@ -73,7 +79,7 @@ metadata = pd.read_table(inputs["metadata"])
 metadata
 
 # %% [markdown]
-# Sample name to ID mapping  - find subcohorts
+# ## Sample name to ID mapping  - find subcohorts
 
 # %%
 inputs['id_map'] = DATA_FOLDER / "Validation Results" / "id.xlsx"
@@ -83,6 +89,9 @@ id_map
 # %%
 print(id_map["CBMRID"].str[:4].value_counts().to_string())
 
+
+# %% [markdown]
+# ## Select cohorts
 
 # %%
 def _select_idx(query: str,
@@ -106,29 +115,38 @@ idx_circaflow = _select_idx(query='Cflow', expected=101)
 # idx_circaflow
 
 # %%
-olink
-
-# %%
 olink_prodoc_val = olink.loc[idx_prodoc, measure_olink.measure].unstack()
 olink_prodoc_val.describe()
 
 # %%
 stem = 'olink_prodoc_val'
-outputs[f'{stem}'] = DATA_FOLDER / f'{stem}.pkl'
+outputs[f'{stem}'] = config.data_processed / f'{stem}.pkl'
 olink_prodoc_val.to_pickle(outputs[f'{stem}'])
-outputs[f'{stem}'] = DATA_FOLDER / f'{stem}.xlsx'
-olink_prodoc_val.to_excel(outputs[f'{stem}'])
+olink_prodoc_val.to_excel(outputs[f'{stem}'].with_suffix('.xlsx'))
 
 # %%
 olink_cflow = olink.loc[idx_circaflow, measure_olink.measure].unstack()
 olink_cflow.describe()
 
+# %% [markdown]
+# Integrate update from Rasmus (last three non-matching IDs)
+
+# %%
+inputs['olink_update'] = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
+olink_update = pd.read_table(inputs['olink_update'], sep='\t', low_memory=False)
+olink_update = olink_update.set_index(measure_olink.idx)
+
+olink_cflow_update = olink_update.loc[:, measure_olink.measure].unstack()
+olink_cflow_update
+
+# %%
+olink_cflow.loc[olink_cflow_update.index]
+
 # %%
 stem = 'olink_cflow'
-fname = DATA_FOLDER / f'{stem}.pkl'
-olink_cflow.to_pickle(fname)
-outputs[stem] = DATA_FOLDER / f'{stem}.xlsx'
+outputs[stem] = config.data_processed / f'{stem}.xlsx'
 olink_cflow.to_excel(outputs[stem])
+olink_cflow.to_pickle(outputs[stem].with_suffix('.pkl'))
 
 # %% [markdown]
 # Log all input and selected output files 
