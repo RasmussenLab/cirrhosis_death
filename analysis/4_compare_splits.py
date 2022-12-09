@@ -42,6 +42,8 @@ name_report = 'train_val_comparison'
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
     FOLDER.mkdir(exist_ok=True)
+else:
+    FOLDER = Path(FOLDER)
 
 # %% [markdown]
 # ## Read data

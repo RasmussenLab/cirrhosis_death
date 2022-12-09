@@ -95,13 +95,16 @@ rule compare_train_val:
         val=fname_pkl_val_clinic,
         nb=nb
     output:
-        sweetviz_report_splits_clinic="{out_path}/{target}/clinic_train_val_comparison.html",
-        nb="{out_path}/{target}"f"/{nb}"
+        sweetviz_report_splits_clinic="{out_path}/prodoc/{target}/clinic_train_val_comparison.html",
+        nb="{out_path}/prodoc/{target}"f"/{nb}"
+    params:
+        folder="{out_path}/prodoc/{target}/"
     shell:
         "papermill {input.nb} {output.nb}"
         " -r fname_pkl_train {input.train}"
         " -r fname_pkl_val {input.val}"
         " -r TARGET {wildcards.target}"
+        " -r FOLDER {params.folder}"
         " -r name_report clinic_train_val_comparison"
 
 
@@ -141,7 +144,6 @@ rule differential_analysis_cohort:
         " -r OLINK {input.olink}"
         f" -r TARGET {project_config.COMPARE_PRODOC}"
         f" -r clinic_cont {_cont_vars_w_target}"
-        f" -r "
         " && jupyter nbconvert {output.nb} --to html"
 
 nb='2_tree.ipynb'
