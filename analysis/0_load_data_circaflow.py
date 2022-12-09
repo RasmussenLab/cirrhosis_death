@@ -169,6 +169,10 @@ idx_duplicated = sample_keys.loc[in_clinic].loc[mask_duplicated].index.unique()
 sample_keys.loc[in_clinic, 'SampleID'].loc[mask_duplicated]
 
 # %%
+pd.read_excel(DATA_DUPLICATES, index_col='ID', sheet_name='two_olink')
+# ToDo: use it to drop features (not done here)
+
+# %%
 in_both = sample_keys.loc[in_clinic, 'SampleID'].reset_index().drop_duplicates(keep='first', subset='ID').set_index('ID')
 in_both.loc[idx_duplicated]
 
@@ -529,13 +533,14 @@ savefig(fig, files_out['km_plot_admission'])
 # ## Targets
 
 # %%
-mask = clinic.columns.str.contains("(90|180)")
-clinic.loc[:,mask] = clinic.loc[:,mask].fillna(0)
-clinic.loc[:,mask].describe()
+# mask = clinic.columns.str.contains("(90|180)")
+# # clinic.loc[:,mask] = clinic.loc[:,mask].fillna(0)
+# # ToDo
+# clinic.loc[:,mask].describe()
 
 # %%
 mask = clinic.columns.str.contains("Adm(90|180)")
-clinic.loc[:,mask].describe() # four targets for liver related admissions
+clinic.loc[:,mask].describe() # two targets for liver related admissions
 
 # %%
 target_name = {k:f'has{k}' for k in clinic.columns[mask]}
@@ -552,9 +557,33 @@ for cutoff in [90, 180]:
                    "DaysToDeathFromInfl"] <= cutoff).astype(int)
 
 targets = pd.DataFrame(targets)
-targets = targets.join(
-    (clinic.loc[:, mask] > 0).astype(int).rename(columns=target_name))
-# targets = targets.sort_index(axis=1, ascending=False)
+# targets = targets.join(
+#     (clinic.loc[:, mask] > 0).astype(int).rename(columns=target_name))
+# # targets = targets.sort_index(axis=1, ascending=False)
+targets.describe()
+
+# %%
+to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
+to_exclude.sum()
+
+# %%
+to_exclude = clinic["LiverAdm180"].isna() & targets["dead180infl"] == True
+to_exclude.sum()
+
+# %%
+for col_adm, col_death in zip(['Adm180',      'Adm90',       'LiverAdm90',  'LiverAdm180'], 
+                              ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
+    to_exclude = clinic[col_adm].isna() & targets[col_death] == True
+    clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0)
+    
+clinic.loc[:, mask].describe()
+
+# %%
+targets = targets.join((clinic.loc[:, mask]).rename(columns=target_name))
+for col in target_name.values():
+    not_na = targets[col].notna()
+    targets.loc[not_na, col] = (targets.loc[not_na, col] > 0).astype(float)
+targets = targets.sort_index(axis=1, ascending=False)
 targets.describe()
 
 # %%
@@ -592,5 +621,53 @@ files_out[config.fname_pkl_cirkaflow_clinic.stem] = config.fname_pkl_cirkaflow_c
 files_out[config.fname_pkl_cirkaflow_olink.stem] = config.fname_pkl_cirkaflow_olink
 clinic.to_pickle(config.fname_pkl_cirkaflow_clinic)
 olink.to_pickle(config.fname_pkl_cirkaflow_olink)
+# %% [markdown]
+# ## Dumped combined clinical data as numeric data for ML applications
+
+# %%
+cols_cat = clinic.dtypes == 'category'
+cols_cat = clinic.columns[cols_cat]
+clinic[cols_cat]
+
+# %%
+encode = {**{k:1 for k in ['Yes', 'yes', 'Male']},
+          **{k:0 for k in ['No', 'no', 'Female']}}
+encode
+
+# %%
+clinic[cols_cat] = clinic[cols_cat].astype('object').replace(encode)
+clinic[cols_cat]
+
+# %%
+clinic[cols_cat].describe()
+
+# %% [markdown]
+# The martial status was made into three dummy variables before (see above):
+# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship, MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
+
+# %%
+mask = clinic.dtypes == 'object'
+clinic.loc[:, mask]
+
+# %%
+mask = clinic.dtypes == 'datetime64[ns]'
+clinic.loc[:,mask]
+
+# %%
+numeric_cols = (clinic.apply(pd.api.types.is_numeric_dtype))
+numeric_cols = clinic.columns[numeric_cols]
+clinic[numeric_cols]
+
+# %%
+clinic[numeric_cols].dtypes.value_counts()
+
+# %%
+# to_drop = ["Study ID"]
+# clinic[numeric_cols].drop(to_drop, axis=1)
+
+# %%
+files_out[config.fname_pkl_cirkaflow_clinic_num.stem] = config.fname_pkl_cirkaflow_clinic_num
+clinic[numeric_cols].to_pickle(config.fname_pkl_cirkaflow_clinic_num)
+
 # %%
 files_out
