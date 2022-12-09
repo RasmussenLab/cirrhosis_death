@@ -1,0 +1,69 @@
+---
+title: "MicrobLiver_Olink_QC_Bridge"
+author: "Sara Elizabeth Stinson"
+date: "19/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source(here::here("R/Project_Files/package-loading.R"))
+```
+
+```{r LOAD RAW DATA, echo = FALSE, warning = FALSE}
+
+library(OlinkAnalyze)
+
+## LOAD MicrobLiver BATCH 1 (N = 1,808)
+MLB1_INF <- OlinkAnalyze::read_NPX(filename = "/Volumes/SUN-CBMR-Hansen-Group/Projects/MicrobLiver/Results/Olink/Raw_data_reports/20202249_Juel_NPX.xlsx")
+
+## LOAD MicrobLiver BATCH 2 (N = 688)
+MLB2 <- OlinkAnalyze::read_NPX(filename = "/Volumes/SUN-CBMR-Hansen-Group/Projects/MicrobLiver/Results/Olink/Raw_data_reports/20212246_Juel_NPX.xlsx")
+
+```
+
+Bridging normalization: One of the dataframes is adjusted to another using overlapping samples (bridge samples). The overlapping samples need to be named the same between the dataframes and adjustment is made using the median of the paired differences between the bridge samples in the two data frames. The two dataframes are inputs df1 and df2, the one being adjusted to is specified in the input reference_project and the overlapping samples are specified in overlapping_samples_df1. Only overlapping_samples_df1 should be input, no matter which dataframe is used as reference_project. 
+
+```{r BRIDGE BATCHES, echo = FALSE, warning = FALSE}
+
+## SELECT CVD PANEL
+MLB2_CVD <- MLB2 %>%
+  dplyr::filter(Panel == 'Olink Cardiovascular II')
+
+## SELECT INFLAMMATION PANEL
+MLB2_INF <- MLB2 %>%
+  dplyr::filter(Panel == 'Olink Inflammation')
+
+## ADD PROJECT NUMBER
+MLB1_INF_df1 <- MLB1_INF %>% dplyr::mutate(Project = '20202249')
+MLB2_INF_df2 <- MLB2_INF %>% dplyr::mutate(Project = '20212246')
+
+## RENAME BRIDGE SAMPLES (CONSISTENCY)
+MLB2_INF_df2r <- MLB2_INF_df2 %>%
+  dplyr::mutate(SampleID = gsub("BRIDGE0", "Bridge_", SampleID)) %>%
+  dplyr::mutate(SampleID = gsub("BRIDGE", "Bridge_", SampleID))
+
+## IDENTIFY OVERLAP OF 16 BRIDGE SAMPLES 
+overlap_samples <- intersect((MLB1_INF_df1 %>% filter(!grepl("control", SampleID, ignore.case=T)))$SampleID,
+                             (MLB2_INF_df2r %>% filter(!grepl("control", SampleID, ignore.case=T)))$SampleID)
+# Find overlap in bridge samples, but exclude Olink controls
+
+## BRIDGING NORMALIZATION
+bridged_df <- OlinkAnalyze::olink_normalization(df1 = MLB1_INF_df1,
+                      df2 = MLB2_INF_df2r,
+                      overlapping_samples_df1 = overlap_samples,
+                      df1_project_nr = '20202249',
+                      df2_project_nr = '20212246',
+                      reference_project = '20202249')
+
+# The second batch will be adjusted too the first batch, according to "reference_project"
+
+## SAVE AS .RDS
+saveRDS(object = bridged_df, file =
+          "/Volumes/SUN-CBMR-Hansen-Group/Projects/MicrobLiver/Results/Olink/Bridge_Normalized/20202249_20212246_NPX_Bridge_Normalized.rds")
+
+## LOADING FOR QC
+ML_B1_B2 <- readRDS(file = "/Volumes/SUN-CBMR-Hansen-Group/Projects/MicrobLiver/Results/Olink/Bridge_Normalized/20202249_20212246_NPX_Bridge_Normalized.rds")
+
+```
+

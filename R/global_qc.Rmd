@@ -1,0 +1,115 @@
+---
+title: "Global_QC"
+author: "Rasmus Jensen, Anne Cathrine Baun Thuesen, Sara Stinson, Yun Huang, Helene Bæk Juel, Evelina Stankevic"
+date: "29/03/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load packages
+source(here::here("R/package-loading.R"))
+```
+
+## Load full dataset
+```{r load-data, include=FALSE}
+# Load data from raw NPX data
+holbaek_serum <- OlinkAnalyze::read_NPX(here::here("data-raw/20210038_Stinson_NPX.xlsx"))
+
+# Add cohort column
+holbaek <- holbaek_serum %>%
+    dplyr::mutate(cohort = "HOL") %>% #Here we add the column cohort and name them all "HOL"
+    dplyr::mutate(cohort = case_when(str_detect(SampleID, "CONTROL") ~ "Control", TRUE ~ "HOL")) #Here we name all the control samples "control" instead of "HOL"
+
+#Loading microbliver bridged samples 
+micro <- readRDS(here::here("data-raw/20202249_20212246_NPX_Bridge_Normalized.rds")) %>%
+  dplyr::select(-Project, -Adj_factor)
+micro_b3 <- readRDS(here::here("data-raw/Q-00557_NPX_Bridge_Normalized.rds"))%>%
+  dplyr::select(-Project, -Adj_factor)
+
+# replace typo TIEP80EC --> TIPS80EC
+micro <- micro %>%
+    mutate(SampleID = sub("TIEP80EC", "TIPS80EC", SampleID))
+# replace typo TIPSKC/93 --> TIPS93
+micro <- micro %>%
+    mutate(SampleID = sub("TIPSKC/93", "TIPS93", SampleID))
+
+# Add cohort column
+micro <- micro %>%
+    mutate(cohort = sub("[0-9]{1,4}.*$", "", SampleID)) %>% # substitute 1-4 numbers and everything after this (.*$) with nothing
+    mutate(cohort = sub("_.*$", "", cohort)) # substitute anything after a _ with nothing to remove long control names and just keep "CONTROL"
+
+micro_b3 <- micro_b3 %>%
+    mutate(cohort = sub("[0-9]{1,4}.*$", "", SampleID)) %>% # substitute 1-4 numbers and everything after this (.*$) with nothing
+    mutate(cohort = sub("_.*$", "", cohort)) # substitute anything after a _ with nothing to remove long control names and just keep "CONTROL"
+
+#merge the three dataframes
+merged_olink <- rbind(micro, micro_b3, holbaek)
+
+# change cytokine names
+# first remove all -
+# then change spaces to _
+# then rename alpha/beta/gamma to a/b/g
+merged_olink <- merged_olink %>%
+    mutate(Assay = gsub("-", "", Assay)) %>%
+    mutate(Assay = gsub(" ", "_", Assay)) %>%
+    mutate(Assay = gsub("alpha", "a", Assay)) %>%
+    mutate(Assay = gsub("beta", "b", Assay)) %>%
+    mutate(Assay = gsub("gamma", "g", Assay))
+
+# change values < LOD of that assay to 50% LOD
+merged_olink <- merged_olink %>%
+    mutate(corrected_NPX = if_else(LOD > NPX, LOD/2, NPX)) %>% #include this to df but not use this for QC
+  dplyr::mutate(Panel = replace(Panel, Panel == "Olink Target 96 Inflammation", "Olink Inflammation"))
+
+```
+
+# Wrangling and QC
+
+## Visualize potential outliers by IQR vs. sample median
+```{r QC_plot}
+olink_qc_plot(merged_olink)
+```
+
+Some samples have a QC warning (red) and several appear to be outliers, but no samples are both outliers and have QC warning.
+
+We can see that out of only 37 samples with QC warning, some ppts with multiple samples have QC warning in all or several samples, presumably due to some underlying disturbance in their blood sample. We suggest to exclude all samples from ppts with more than one QC warning, however we do not exclude any samples ourselves.
+
+
+
+```{r}
+
+# add a column for sample type (Lihep EDTA etc, check the last sample manifest)
+merged_olink2<-merged_olink %>% 
+    dplyr::mutate(cohort = replace(cohort, cohort == "Control", "CONTROL")) %>% 
+    dplyr::mutate(Sample_type = case_when(
+        cohort %in% c("AHEP", "Bridge", "HCOT", "MLGB","PK", "PRF", "RDC", "SIP", "TIPS", "ProD", "Bridge", "CONTROL", "HOL-F", "HOL-N") ~ "Plasma_EDTA", 
+        cohort %in% c("ALD", "ALCO", "HP", "RFX") ~ "Plasma_LiHep", 
+        cohort %in% c("HOL") ~ "Serum"
+    ))
+
+#This code chunk will create a global missing frequency variable
+merged_olink3 <- merged_olink2 %>%
+    group_by(Assay, Sample_type) %>% 
+  dplyr::mutate(no_missing_obs = sum(is.na(NPX) | NPX < LOD),
+         total_obs = length(NPX)) %>%
+  dplyr::mutate(MissingProp = no_missing_obs/total_obs) # calculates the global MissingFreq
+
+
+#Writing csv file to be split in the next script
+write.csv(merged_olink3, here::here("data/20220330Global_QC_olink_wBatch3.csv"), row.names = F)
+```
+
+
+#Making dataset order by assays
+```{r}
+## Creating a panel overview of the proteins included in the olink dataset
+olink_proteins <- merged_olink3 %>% # using the df in the long format
+  dplyr::group_by(Assay) %>%
+  dplyr::select(UniProt, OlinkID, LOD, Panel, Panel_Version, MissingProp) %>% #These I think would be important to include
+  dplyr::distinct(Assay, .keep_all = TRUE) %>% # This keeps one value for each protein in the long format
+  arrange(Assay) # Orders proteins
+
+## Save metadata
+write.table(olink_proteins, file = here::here("data/20220330_olink_proteins_wBatch3.txt"), sep = "\t", quote = F)
+```
