@@ -2,7 +2,8 @@
 # - 'IgM', 'IgG', 'IgA'
 # - 'Icterus', 'SBP', 'Cancer', 'Depression', 'Psychiatric'
 
-rename_dict = {'SampleID': 'SampleID',
+rename_dict = {
+    'SampleID': 'SampleID',
     'Label: ': 'ID',
     'Comment on sample: ': 'CommentOnSample',
     'DateInflSample': 'DateInflSample',

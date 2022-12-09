@@ -69,18 +69,19 @@ vars_cont = [
     # # Demographics
     'Age',
     # # laboratory markers
-    'IgM',
-    'IgG',
-    'IgA',
+    # 'IgM',
+    # 'IgG',
+    # 'IgA',
     'Hgb',
     'Leucocytes',
     'Platelets',
-    'Bilirubin',
+    'Bilirubin', # part of MELD
     'Albumin',
     'CRP',
-    'pp',
-    'INR',
+    # 'pp', # should be the same as INR
+    'INR', # part of MELD
     'ALAT',
+    'Creatinine', # used as measure of kidney function, part of MELD 
     # # Intervals
     # 'DaysToDeath',
     # 'DaysToAdmFromDiagnose',
@@ -100,11 +101,17 @@ counts = [  # # admission
 
 # relevant comorbidities to control for (all binary)
 comorbidities = [
-    'Cancer',
-    'Depression',
-    'Psychiatric',
+    # 'Cancer', # unknown in CirkaFlow
+    # 'Depression', # unknown in CirkaFlow
+    # 'Psychiatric', # unknown in CirkaFlow
     'Diabetes',
-    'HeartDiseaseTotal',
+    # 'HeartDiseaseTotal', # excluded in CirkaFlow
     'Hypertension',
     'HighCholesterol',
 ]
+
+covars = ["Sex", "Age", "MELD-score", *comorbidities]
+
+scores = ['MELD-score', 'MELD-Na', 'ChildPugh',]
+
+# clini

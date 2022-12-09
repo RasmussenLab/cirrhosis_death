@@ -59,6 +59,9 @@ da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyper
 # OLINK = config.fname_pkl_cirkaflow_olink
 
 # %%
+# da_covar='Sex,Age,Diabetes,Hypertension,HighCholesterol,MELD-score'
+
+# %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
 FOLDER.mkdir(exist_ok=True, parents=True)

@@ -27,6 +27,7 @@ import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
 from heatmap import heatmap, corrplot
+import umap
 
 import sklearn
 import sklearn.impute
@@ -51,19 +52,22 @@ import config
 # - [ ] allow feature selection based on requested variables
 
 # %% tags=["parameters"]
+CLINIC:Path = config.fname_pkl_all_clinic_num # clinic numeric pickled, can contain missing
+OLINK:Path = config.fname_pkl_all_olink # olink numeric pickled, can contain missing
 TARGET:str = 'dead180infl' # target column in CLINIC data
-CLINIC:Path = config.fname_pkl_prodoc_clinic_num # clinic numeric pickled, can contain missing
-# feat_clinic:list = config.clinic_data.comorbidities + config.clinic_data.vars_cont # ToDo: make string
-OLINK:Path = config.fname_pkl_prodoc_olink # olink numeric pickled, can contain missing
-# X_numeric: Path
 feat_set_to_consider:str='OLINK_AND_CLINIC'
 n_features_max:int = 15
 VAL_IDS: str = ''  #
+VAL_IDS_query: str = 'Cflow'
 weights:bool = True
 FOLDER = ''
 
 # %%
-weights = False
+# CLINIC:Path = config.fname_pkl_all_clinic_num
+# OLINK:Path = config.fname_pkl_all_olink
+# weights = False
+# feat_set_to_consider = "SCORES_ONLY"
+# FOLDER = "S:/SUND-CBMR-RegH-cohorts/ProDoc/reports_dev/prodoc/hasLiverAdm180/SCORES_ONLY"
 
 # %% [markdown]
 # # Setup
@@ -100,13 +104,18 @@ target_counts
 # %%
 olink_val, clinic_val = None, None
 if not VAL_IDS:
-    logging.warning("Create train and test split.")
-    _, VAL_IDS = sklearn.model_selection.train_test_split(
-        clinic.index,
-        test_size=0.2,
-        random_state=123,
-        stratify=clinic[TARGET])
-    VAL_IDS = list(VAL_IDS)
+    if VAL_IDS_query:
+        logging.warning(f"Querying index using: {VAL_IDS_query}")
+        VAL_IDS = clinic.filter(like='Cflow', axis=0).index.to_list()
+        logging.warning(f"Found {len(VAL_IDS)} Test-IDs")
+    else:
+        logging.warning("Create train and test split.")
+        _, VAL_IDS = sklearn.model_selection.train_test_split(
+            clinic.index,
+            test_size=0.2,
+            random_state=123,
+            stratify=clinic[TARGET])
+        VAL_IDS = list(VAL_IDS)
 elif isinstance(VAL_IDS, str):
     VAL_IDS = VAL_IDS.split(",")
 else:
@@ -156,6 +165,8 @@ if VAL_IDS:
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET / feat_set_to_consider
     FOLDER.mkdir(exist_ok=True, parents=True)
+else:
+    FOLDER = Path(FOLDER)
 FOLDER
 
 # %% [markdown]
@@ -180,6 +191,11 @@ predictions = y_val.to_frame('true')
 feat_w_missings = X.isna().sum()
 feat_w_missings = feat_w_missings.loc[feat_w_missings > 0]
 feat_w_missings
+
+# %%
+row_w_missing = X.isna().sum(axis=1).astype(bool)
+col_w_missing = X.isna().sum(axis=0).astype(bool)
+X.loc[row_w_missing, col_w_missing]
 
 # %%
 median_imputer = sklearn.impute.SimpleImputer(strategy='median')
@@ -213,7 +229,8 @@ files_out['scatter_first_5PCs.pdf'] = FOLDER / 'scatter_first_5PCs.pdf'
 
 fig, axes = plt.subplots(5, 2, figsize=(8.3, 11.7), layout='constrained')
 PCs = PCs.join(y.astype('category'))
-for(i,j), ax in zip(itertools.combinations(range(5), 2), axes.flatten()):
+up_to = min(PCs.shape[-1], 5)
+for(i,j), ax in zip(itertools.combinations(range(up_to), 2), axes.flatten()):
     PCs.plot.scatter(i, j, c=TARGET, cmap='Paired', ax=ax)
 _ = PCs.pop(TARGET)
 njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
@@ -222,7 +239,6 @@ njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
 # ## UMAP
 
 # %%
-import umap
 reducer = umap.UMAP()
 embedding = reducer.fit_transform(X_scaled)
 
@@ -259,7 +275,8 @@ else:
 
 # %%
 cv_feat = njab.sklearn.find_n_best_features(
-    X=X,
+    X=X_scaled,
+    # X=X,
     y=y,
     model=sklearn.linear_model.LogisticRegression(),
     name=TARGET,
@@ -280,7 +297,8 @@ n_feat_best.to_excel(writer, 'n_feat_best')
 n_feat_best
 
 # %%
-splits = Splits(X_train=X, X_test=X_val, y_train=y, y_test=y_val)
+splits = Splits(X_train=X_scaled, X_test=scaler.transform(X_val), y_train=y, y_test=y_val)
+# splits = Splits(X_train=X, X_test=X_val, y_train=y, y_test=y_val)
 results_model = njab.sklearn.run_model(
     splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
@@ -306,7 +324,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 np.exp(results_model.model.coef_)
 
 # %%
-des_selected_feat = X[results_model.selected_features].describe()
+des_selected_feat = splits.X_train[results_model.selected_features].describe()
 des_selected_feat.to_excel(writer, 'sel_feat', float_format='%.3f')
 des_selected_feat
 
@@ -323,7 +341,7 @@ njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %%
 N_BINS = 20
-score = get_score(clf=results_model.model, X=X[results_model.selected_features], pos=1)
+score = get_score(clf=results_model.model, X=splits.X_train[results_model.selected_features], pos=1)
 ax = score.hist(bins=N_BINS)
 files_out['hist_score_train.pdf'] = FOLDER / 'hist_score_train.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train.pdf'])
@@ -340,7 +358,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # Test data scores
 
 # %%
-score_val = get_score(clf=results_model.model, X=X_val[results_model.selected_features], pos=1)
+score_val = get_score(clf=results_model.model, X=splits.X_test[results_model.selected_features], pos=1)
 predictions['score'] = score_val
 ax = score_val.hist(bins=N_BINS) # list(x/N_BINS for x in range(0,N_BINS)))
 ax.set_ylabel('count')
@@ -376,7 +394,7 @@ cutoff
 # %%
 y_pred_val = njab.sklearn.scoring.get_custom_pred(
     clf=results_model.model,
-    X=X_val[results_model.selected_features],
+    X=splits.X_test[results_model.selected_features],
     cutoff=cutoff)
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
@@ -385,19 +403,19 @@ _.to_excel(writer, f"CM_test_cutoff_{cutoff:.3f}")
 _
 
 # %%
-y_pred_val = njab.sklearn.scoring.get_custom_pred(
-    clf=results_model.model,
-    X=X_val[results_model.selected_features],
-    cutoff=0.5)
-predictions[model_name] = y_pred_val
-predictions['dead'] = clinic['dead']
-_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-# _.to_excel(writer, "CM_test")
-_
+# y_pred_val = njab.sklearn.scoring.get_custom_pred(
+#     clf=results_model.model,
+#     X=splits.X_test[results_model.selected_features],
+#     cutoff=0.5)
+# predictions[model_name] = y_pred_val
+# predictions['dead'] = clinic['dead']
+# _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+# # _.to_excel(writer, "CM_test")
+# _
 
 # %%
 y_pred_val = get_pred(clf=results_model.model,
-                      X=X_val[results_model.selected_features])
+                      X=splits.X_test[results_model.selected_features])
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
@@ -418,20 +436,20 @@ def get_lr_multiplicative_decomposition(results, X, score, y):
     components = components.sort_values('score', ascending=False)
     return components
 
-components = get_lr_multiplicative_decomposition(results=results_model, X=X, score=score, y=y)
+components = get_lr_multiplicative_decomposition(results=results_model, X=splits.X_train, score=score, y=y)
 components.to_excel(writer, 'decomp_multiplicative_train')
-components.to_excel(writer, 'decomp_multiplicative_train_view', float_format='%.3f')
+components.to_excel(writer, 'decomp_multiplicative_train_view', float_format='%.5f')
 components.head(10)
 
 # %%
-components_test = get_lr_multiplicative_decomposition(results=results_model, X=X_val, score=score_val, y=y_val)
+components_test = get_lr_multiplicative_decomposition(results=results_model, X=splits.X_test, score=score_val, y=y_val)
 components_test.to_excel(writer, 'decomp_multiplicative_test')
-components_test.to_excel(writer, 'decomp_multiplicative_test_view', float_format='%.3f')
+components_test.to_excel(writer, 'decomp_multiplicative_test_view', float_format='%.5f')
 components_test.head(10)
 
 # %%
 pivot = y.to_frame()
-pivot['pred'] = results_model.model.predict(X[results_model.selected_features])
+pivot['pred'] = results_model.model.predict(splits.X_train[results_model.selected_features])
 pivot = pivot.join(clinic.dead.astype(int))
 pivot.describe().iloc[:2]
 
@@ -446,6 +464,13 @@ writer.close()
 # ## Plot TP, TN, FP and FN on PCA plot
 
 # %%
+reducer = umap.UMAP()
+embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
+
+embedding = pd.DataFrame(embedding, index=X_scaled.index, columns=['UMAP 1', 'UMAP 2']).join(y.astype('category'))
+ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
+
+# %%
 predictions['label'] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x['true'], x[model_name]),
                       axis=1)
@@ -455,11 +480,11 @@ predictions.loc[mask].sort_values('score', ascending=False)
 
 # %%
 X_val_scaled = scaler.transform(X_val)
-PCs_val = pd.DataFrame(pca.transform(X_val_scaled), index=X_val.index, columns=PCs.columns)
-PCs_val
+embedding_val = pd.DataFrame(reducer.transform(X_val_scaled[results_model.selected_features]), index=X_val_scaled.index, columns=['UMAP 1', 'UMAP 2'])
+embedding_val.sample(3)
 
 # %%
-pred_train = y.to_frame('true').join(get_pred(results_model.model, X[results_model.selected_features]).rename(model_name))
+pred_train = y.to_frame('true').join(get_pred(results_model.model, splits.X_train[results_model.selected_features]).rename(model_name))
 pred_train['label'] = pred_train.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x['true'], x[model_name]),
                       axis=1)
@@ -471,7 +496,7 @@ colors
 
 # %%
 fig, axes = plt.subplots(1,2, figsize=(8,4), sharex=True, sharey=True)
-for _pcs, ax, _title, _model_pred_label in zip([PCs, PCs_val],
+for _pcs, ax, _title, _model_pred_label in zip([embedding, embedding_val],
                                                 axes,
                                                 ['train', 'test'],
                                                 [pred_train['label'], predictions['label']]
@@ -483,8 +508,11 @@ for _pcs, ax, _title, _model_pred_label in zip([PCs, PCs_val],
                              ax=ax)
     ax.set_title(_title)
 
-files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
-njab.plotting.savefig(fig, files_out['pred_pca_labeled'])
+# files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
+# njab.plotting.savefig(fig, files_out['pred_pca_labeled'])
+
+files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
+njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 
 # %% [markdown]
 # ## Outputs

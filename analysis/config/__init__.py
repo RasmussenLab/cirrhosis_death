@@ -20,8 +20,12 @@ fname_pkl_prodoc_clinic_num = data_processed / 'prodoc_clinic_all_numeric.pkl'  
 
 fname_pkl_targets = data_processed / 'targets.pkl'
 
-fname_pkl_cirkaflow_clinic = data_processed / 'cirkaflow_clinic_all.pkl'
 fname_pkl_cirkaflow_olink = data_processed / 'cirkaflow_olink_all.pkl'
+fname_pkl_cirkaflow_clinic = data_processed / 'cirkaflow_clinic_all.pkl'
+fname_pkl_cirkaflow_clinic_num =  data_processed / 'cirkaflow_clinic_all_numeric.pkl'
+
+fname_pkl_all_clinic_num = data_processed / 'all_clinic_num.pkl'
+fname_pkl_all_olink = data_processed / 'all_olink.pkl'
 
 from . import clinic_data
 from . import olink
