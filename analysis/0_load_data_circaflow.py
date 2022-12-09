@@ -48,6 +48,7 @@ DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx'
 DATA_OLINK = DATA_FOLDER / 'olink_cflow.pkl'
 DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv"
 DATA_KEYS_UPDATE = DATA_FOLDER /  "Validation Results" / 'cflow_id_update.xlsx'
+DATA_DUPLICATES = DATA_FOLDER /  "Validation Results" / 'duplicates.xlsx'
 
 
 # %%
@@ -74,13 +75,20 @@ duplicates
 # %%
 sample_keys.loc[duplicates.index.unique()]
 
+# %% [markdown]
+# Some keys were changed in the course of time and needed to be renamed manuelly:
+
 # %%
 sample_keys_update = pd.read_excel(DATA_KEYS_UPDATE, index_col=0)
+sample_keys_update.index = sample_keys_update.index.astype('string') # make sure index type is not an integer
 sample_keys_update
 
 # %%
 rename_id = sample_keys_update.dropna()['ID'].to_dict()
 sample_keys = sample_keys.rename(rename_id)
+
+# %% [markdown]
+# move column with `Projekt ID` forward
 
 # %%
 clinic.insert(2, "Projekt ID", clinic.pop("Projekt ID"))
@@ -88,9 +96,15 @@ id_cols = ['SampleID', 'ID', 'Projekt ID']
 clinic[id_cols] = clinic[id_cols].astype(str)
 clinic.sample(3)
 
+# %% [markdown]
+# Find cases where all three IDs agree
+
 # %%
 mask_all_equal = (clinic['SampleID'] == clinic['ID'] ) & (clinic['ID'] == clinic['Projekt ID'])
 clinic.loc[~mask_all_equal]
+
+# %% [markdown]
+# Find matches for `SampleID`
 
 # %%
 olink.sample(3)
@@ -102,6 +116,9 @@ in_olink
 # %%
 in_clinic = sample_keys.index.intersection(clinic['ID'])
 in_clinic
+
+# %% [markdown]
+# Do other IDs contain further information?
 
 # %%
 assert set(in_clinic) == set(in_clinic.union(sample_keys.index.intersection(clinic['SampleID'])))
@@ -147,38 +164,64 @@ cflow_to_find
 # Remove duplicates, i.e. if a clincal samples has more than one OLink sample (as highlighted above)
 
 # %%
-in_both = sample_keys.loc[in_clinic, 'SampleID'].index.drop_duplicates(keep=False)
-len(in_both)
+mask_duplicated = sample_keys.loc[in_clinic, 'SampleID'].index.duplicated(keep=False)
+idx_duplicated = sample_keys.loc[in_clinic].loc[mask_duplicated].index.unique()
+sample_keys.loc[in_clinic, 'SampleID'].loc[mask_duplicated]
 
 # %%
-in_both
+in_both = sample_keys.loc[in_clinic, 'SampleID'].reset_index().drop_duplicates(keep='first', subset='ID').set_index('ID')
+in_both.loc[idx_duplicated]
 
 # %%
-clinic = clinic.loc[in_both]
-olink = olink.loc[sample_keys.loc[in_both, 'SampleID']]
+print(f"Keep N = {len(in_both)} unique samples")
+
+# %% [markdown]
+# Duplicated patient -> needs to be manuelly removed, drop last
+
+# %%
+duplicated_patients = pd.read_excel(DATA_DUPLICATES, index_col='ID')
+duplicated_patients
+
+# %%
+clinic.loc[duplicated_patients.index]
+
+# %%
+in_both = in_both.drop(duplicated_patients[duplicated_patients['to_drop']].index) # manuelly remove one case which is a duplicated patient
+print(f"Keep N = {len(in_both)} unique samples")
+
+# %%
+in_both.sample(3)
+
+# %%
+clinic = clinic.loc[in_both.index]
+olink = olink.loc[in_both['SampleID']]
 clinic.shape, olink.shape
+
+# %%
+olink
 
 # %% [markdown]
 # Set `SampleID` as new index for clinical data
 
 # %%
-clinic['CflowID'] = sample_keys.loc[in_both, 'SampleID']
+clinic['CflowID'] = in_both
 clinic = clinic.set_index('CflowID')
+clinic.sample(3)
 
 # %%
 # clinic[config.clinic_data.vars_binary]
 vars_binary = src.pandas.get_overlapping_columns(clinic, config.clinic_data.vars_binary)
-clinic[vars_binary]
+clinic[vars_binary].sample(5)
 
 # %%
 vars_cont = src.pandas.get_overlapping_columns(clinic, config.clinic_data.vars_cont)
-clinic[vars_cont]
+clinic[vars_cont].sample(5)
 
 # %%
 clinic.dtypes.value_counts()
 
 # %%
-clinic.loc[:,clinic.dtypes == 'object']
+clinic.loc[:,clinic.dtypes == 'object'].sample(5)
 
 # %%
 clinic["cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH, 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri"].value_counts()
@@ -339,7 +382,7 @@ def get_dummies_yes_no(s, prefix=None):
 # clinic = clinic.join(get_dummies_yes_no(clinic["DiagnosisPlace"]))
 # clinic = clinic.join(get_dummies_yes_no(clinic["MaritalStatus"], prefix='MaritalStatus'))
 clinic = clinic.join(get_dummies_yes_no(clinic["CauseOfDeath"], prefix='CoD'))
-clinic
+clinic.sample(5)
 
 # %% [markdown]
 # - few have more than one etiology
