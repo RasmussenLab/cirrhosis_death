@@ -3,11 +3,17 @@ from config import fname_pkl_clinic
 from config import fname_pkl_olink
 from config import fname_pkl_val_clinic
 from config import fname_pkl_prodoc_olink
+from config import fname_pkl_prodoc_clinic
+from config import fname_pkl_cirkaflow_clinic
+from config import fname_pkl_cirkaflow_olink
 from config import TARGETS
 import config as project_config
 
 print(folder_reports)
 
+configfile: 'config/workflow/prodoc_vs_cirkaflow.yaml'
+
+print(config)
 
 DATA_FOLDER = Path(project_config.data)
 DATA_PROCESSED = Path(project_config.data_processed)
@@ -16,13 +22,14 @@ FOLDER_REPORTS = Path(project_config.folder_reports)
 rule all:
     input: 
         expand(
-            ["{out_path}/{target}/1_explorative_analysis.ipynb",
-             "{out_path}/{target}/2_tree.ipynb",
-             "{out_path}/{target}/clinic_train_val_comparison.html",],
+            ["{out_path}/{cohort}/{target}/1_explorative_analysis.ipynb",
+            #  "{out_path}/{target}/2_tree.ipynb",
+             "{out_path}/prodoc/{target}/clinic_train_val_comparison.html",],
             out_path=folder_reports,
-            target=TARGETS),
+            target=TARGETS,
+            cohort=['prodoc', 'cirkaflow']),
         expand(
-            "{out_path}/{target}/{feat_sets}/3_log_reg.ipynb",
+            "{out_path}/prodoc/{target}/{feat_sets}/3_log_reg.ipynb",
             out_path=folder_reports,
             target=TARGETS,
             feat_sets=project_config.feat_sets),
@@ -97,14 +104,20 @@ rule compare_train_val:
         " -r TARGET {wildcards.target}"
         " -r name_report clinic_train_val_comparison"
 
+
+data_cohort = {'cirkaflow': dict(olink=fname_pkl_cirkaflow_olink,
+                            clinic=fname_pkl_cirkaflow_clinic),
+          'prodoc': dict(olink=fname_pkl_prodoc_olink,
+                        clinic=fname_pkl_prodoc_clinic)}
+
 nb='1_explorative_analysis.ipynb'
 rule differential_analysis:
     input:
-        olink=fname_pkl_olink,
-        clinic=fname_pkl_clinic,
+        olink=lambda w: data_cohort[w.cohort]['olink'], #fname_pkl_olink,
+        clinic=lambda w: data_cohort[w.cohort]['clinic'], #fname_pkl_clinic,
         nb=nb
     output:
-        nb="{out_path}/{target}"f"/{nb}"
+        nb="{out_path}/{cohort}/{target}"f"/{nb}"
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -113,7 +126,8 @@ rule differential_analysis:
         " -r TARGET {wildcards.target}"
         " && jupyter nbconvert {output.nb} --to html"
 
-rule differential_analysis_splits:
+_cont_vars_w_target=','.join(project_config.clinic_data.vars_cont + TARGETS)
+rule differential_analysis_cohort:
     input:
         olink=project_config.fname_pkl_prodoc_olink,
         clinic=project_config.fname_pkl_prodoc_clinic,
@@ -126,6 +140,8 @@ rule differential_analysis_splits:
         " -r CLINIC {input.clinic}"
         " -r OLINK {input.olink}"
         f" -r TARGET {project_config.COMPARE_PRODOC}"
+        f" -r clinic_cont {_cont_vars_w_target}"
+        f" -r "
         " && jupyter nbconvert {output.nb} --to html"
 
 nb='2_tree.ipynb'
@@ -145,11 +161,13 @@ rule decision_tree:
 nb='3_log_reg.ipynb'
 rule log_reg:
     input:
-        CLINIC=project_config.fname_pkl_prodoc_clinic_num,
-        OLINK=project_config.fname_pkl_prodoc_olink,
+        CLINIC=project_config.fname_pkl_all_clinic_num,
+        OLINK=project_config.fname_pkl_all_olink,
         nb=nb
     output:
-        nb="{out_path}/{target}/{feat_sets}"f"/{nb}"
+        nb="{out_path}/prodoc/{target}/{feat_sets}"f"/{nb}"
+    params:
+        folder="{out_path}/prodoc/{target}/{feat_sets}"
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -157,7 +175,8 @@ rule log_reg:
         " -r CLINIC {input.CLINIC}"
         " -r OLINK {input.OLINK}"
         " -r feat_set_to_consider {wildcards.feat_sets}"
-        # " -r VAL_IDS"
+        " -r VAL_IDS_query Cflow"
+        " -r FOLDER {params.folder}"
         # use_val_split = True
         # FOLDER = ''
         " && jupyter nbconvert {output.nb} --to html"

@@ -1,0 +1,6 @@
+da_covar: Sex,Age,Diabetes,Hypertension,HighCholesterol,MELD-score
+fname_pkl_prodoc_olink:
+fname_pkl_val_clinic:
+fname_pkl_olink:
+fname_pkl_clinic:
+TARGETS:
