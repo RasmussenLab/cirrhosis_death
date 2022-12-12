@@ -24,7 +24,7 @@ rule all:
         expand(
             ["{out_path}/{cohort}/{target}/1_explorative_analysis.ipynb",
              #"{out_path}/{target}/2_tree.ipynb",
-             "{out_path}/prodoc/{target}/clinic_train_val_comparison.html",
+             "{out_path}/prodoc/{target}/train_val_comparison.html",
              "{out_path}/{cohort}/{target}/1_PC1_vs_PC2.pdf",
              "{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
              "{out_path}/{cohort}/clinic_data_profil.html",
@@ -191,21 +191,22 @@ rule differential_analysis_cohort:
 nb="4_compare_splits.ipynb"
 rule compare_train_val:
     input:
-        train=fname_pkl_clinic, # needs update
-        val=fname_pkl_val_clinic,
+        clinic=project_config.fname_pkl_all_clinic_num, # needs update
+        olink=project_config.fname_pkl_all_olink,
         nb=nb
     output:
-        sweetviz_report_splits_clinic="{out_path}/prodoc/{target}/clinic_train_val_comparison.html",
+        sweetviz_report_splits_clinic="{out_path}/prodoc/{target}/train_val_comparison.html",
         nb="{out_path}/prodoc/{target}"f"/{nb}"
     params:
         folder="{out_path}/prodoc/{target}/"
     shell:
         "papermill {input.nb} {output.nb}"
-        " -r fname_pkl_train {input.train}"
-        " -r fname_pkl_val {input.val}"
+        " -r fname_pkl_clinic {input.clinic}"
+        " -r fname_pkl_olink {input.olink}"
         " -r TARGET {wildcards.target}"
+        " -r VAL_IDS_query Cflow"
         " -r FOLDER {params.folder}"
-        " -r name_report clinic_train_val_comparison"
+        " -r name_report train_val_comparison"
 
 
 nb='2_tree.ipynb'
