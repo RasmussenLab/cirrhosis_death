@@ -1,23 +1,14 @@
-from config import folder_reports
-from config import fname_pkl_clinic
-from config import fname_pkl_olink
-from config import fname_pkl_val_clinic
-from config import fname_pkl_prodoc_olink
-from config import fname_pkl_prodoc_clinic
-from config import fname_pkl_cirkaflow_clinic
-from config import fname_pkl_cirkaflow_olink
 from config import TARGETS
 import config as project_config
-
-print(folder_reports)
+folder_reports = project_config.folder_reports
 
 configfile: 'config/workflow/prodoc_vs_cirkaflow.yaml'
 
-print(config)
 
-DATA_FOLDER = Path(project_config.data)
-DATA_PROCESSED = Path(project_config.data_processed)
-FOLDER_REPORTS = Path(project_config.folder_reports)
+DATA_FOLDER = project_config.data
+DATA_PROCESSED = project_config.data_processed
+FOLDER_REPORTS = project_config.folder_reports
+
 
 rule all:
     input: 
@@ -45,12 +36,13 @@ rule all:
 nb="0_load_data_olink_validation.ipynb"
 rule validation_data:
     input:
-        olink='Validation Results/ProDoc_Olink_bridged_QC.tsv',
-        metadata='Validation Results/metadata.tsv',
-        id_map='Validation Results/id.xlsx'
+        olink=DATA_FOLDER / 'Validation Results/ProDoc_Olink_bridged_QC.tsv',
+        metadata=DATA_FOLDER / 'Validation Results/metadata.tsv',
+        id_map=DATA_FOLDER / 'Validation Results/id.xlsx',
+        nb=nb
     output:
-        olink_prodoc_val='olink_prodoc_val.xlsx',
-        olink_cflow='olink_cflow.xlsx',
+        olink_prodoc_val=DATA_PROCESSED / 'olink_prodoc_val.xlsx',
+        olink_cflow=DATA_PROCESSED / 'olink_cflow.pkl',
         nb=f"{folder_reports}/data_circaflow/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
@@ -62,24 +54,24 @@ nb='0_load_data_prodoc.ipynb'
 rule prepare_data_prodoc:
     input:
         nb=nb,
-        olink_prodoc_val='olink_prodoc_val.xlsx',
-        DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-11-24.xlsx',
+        olink_prodoc_val=DATA_PROCESSED / 'olink_prodoc_val.xlsx',
+        DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx',
         DATA_OLINK=DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
-        DATA_OLINK_VAL=DATA_FOLDER / 'olink_prodoc_val.xlsx'
     output:
         lifelines="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/lifelines.pdf",
-        death_vs_alive_diagonose_dates="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/death_vs_alive_diagonose_dates",
+        death_vs_alive_diagonose_dates="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/death_vs_alive_diagonose_dates.pdf",
         timing_deaths_over_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/timing_deaths_over_time.pdf",
         died_before_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/died_before_adm.xlsx",
         km_plot_death="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_death.pdf",
         deaths_along_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/deaths_along_time.pdf",
         km_plot_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_admission.pdf",
         targets="S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed/targets.pkl",
-        clinic_pkl_train=fname_pkl_clinic, 
-        olink=fname_pkl_olink,
-        val_clinic=fname_pkl_val_clinic,
+        clinic_pkl_train=project_config.fname_pkl_clinic, 
+        olink=project_config.fname_pkl_olink,
+        val_clinic=project_config.fname_pkl_val_clinic,
         fname_pkl_prodoc_clinic_num=project_config.fname_pkl_prodoc_clinic_num,
-        prodoc_olink_all=fname_pkl_prodoc_olink,
+        fname_pkl_prodoc_clinic=project_config.fname_pkl_prodoc_clinic,
+        prodoc_olink_all=project_config.fname_pkl_prodoc_olink,
         nb=f"{folder_reports}/data_prodoc/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
@@ -92,7 +84,7 @@ rule prepare_data_cirkaflow:
     input:
         nb=nb,
         DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx',
-        DATA_OLINK = DATA_FOLDER / 'olink_cflow.pkl',
+        DATA_OLINK = DATA_PROCESSED / 'olink_cflow.pkl',
         DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv",
         DATA_KEYS_UPDATE = DATA_FOLDER /  "Validation Results" / 'cflow_id_update.xlsx',
         DATA_DUPLICATES = DATA_FOLDER /  "Validation Results" / 'duplicates.xlsx'
@@ -128,10 +120,10 @@ rule combine_all_data:
 ##########################################################################################
 ### Differential analysis and data profiling
 
-data_cohort = {'cirkaflow': dict(olink=fname_pkl_cirkaflow_olink,
-                            clinic=fname_pkl_cirkaflow_clinic),
-          'prodoc': dict(olink=fname_pkl_prodoc_olink,
-                        clinic=fname_pkl_prodoc_clinic)}
+data_cohort = {'cirkaflow': dict(olink=project_config.fname_pkl_cirkaflow_olink,
+                            clinic=project_config.fname_pkl_cirkaflow_clinic),
+          'prodoc': dict(olink=project_config.fname_pkl_prodoc_olink,
+                        clinic=project_config.fname_pkl_prodoc_clinic)}
 
 rule profile_data:
     input:
@@ -212,8 +204,8 @@ rule compare_train_val:
 nb='2_tree.ipynb'
 rule decision_tree:
     input:
-        CLINIC=fname_pkl_olink,
-        OLINK=fname_pkl_clinic,
+        CLINIC=project_config.fname_pkl_olink,
+        OLINK=project_config.fname_pkl_clinic,
         nb=nb
     output:
         nb="{out_path}/{target}"f"/{nb}"

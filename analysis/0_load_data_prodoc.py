@@ -58,9 +58,9 @@ files_out=dict()
 config.STUDY_ENDDATE
 
 # %% tags=["parameters"]
-DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-11-24.xlsx'
+DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx'
 DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
-DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
+DATA_OLINK_VAL = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
 
 # %% [markdown]
 # Load clinical data
@@ -308,6 +308,7 @@ ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
     ylabel='survival rate',
     ax=ax,
     legend=False)
+ax.legend([f"KP admission (N={clinic['dead'].notna().sum()})", '95% CI'])
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 files_out['km_plot_death'] = FOLDER_REPORTS / 'km_plot_death.pdf'
@@ -330,21 +331,22 @@ files_out['deaths_along_time'] = FOLDER_REPORTS / 'deaths_along_time.pdf'
 savefig(fig, files_out['deaths_along_time'])
 
 # %% [markdown]
-# ## KP plot admissions
+# ## Kaplan-Meier plot admissions
+
+# %%
+to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 
 # %%
 clinic["LiverAdm180"].value_counts(dropna=False).sort_index()
 
 # %%
-to_exclude = clinic["LiverAdm180"].isna() & clinic["dead"] == True
-clinic.loc[to_exclude, ["LiverAdm180", "dead"]]
+to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 
 # %%
 kmf = KaplanMeierFitter()
 
 mask = ~to_exclude
 print(f"Based on {mask.sum()} patients")
-# kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["LiverAdm180"].fillna(0))
 kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "LiverAdm180"].fillna(0))
 
 fig, ax = plt.subplots()
@@ -355,9 +357,11 @@ ax = kmf.plot(#title='Kaplan Meier curve for liver related admissions',
               xlabel='Days since inflammation sample',
               ylabel='rate no liver related admission',
               legend=False)
+ax.legend([f"KP admission (N={mask.sum()})", '95% CI'])
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 fig = ax.get_figure()
+
 files_out['km_plot_admission'] = FOLDER_REPORTS / 'km_plot_admission.pdf'
 savefig(fig, files_out['km_plot_admission'])
 
@@ -386,18 +390,19 @@ targets = pd.DataFrame(targets)
 targets.describe()
 
 # %%
-to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
+# to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
+# to_exclude.sum()
+to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 to_exclude.sum()
 
 # %%
-to_exclude = clinic["LiverAdm180"].isna() & targets["dead180infl"] == True
-to_exclude.sum()
+clinic.loc[to_exclude]
 
 # %%
 for col_adm, col_death in zip(['Adm180', 'Adm90', 'LiverAdm90', 'LiverAdm180'], 
                            ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
-    to_exclude = clinic[col_adm].isna() & targets[col_death] == True
     clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0)
+    clinic.loc[to_exclude, col_adm] = np.nan
     
 clinic.loc[:, mask].describe()
 

@@ -45,7 +45,7 @@ config.STUDY_ENDDATE
 
 # %%
 DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx'
-DATA_OLINK = DATA_FOLDER / 'olink_cflow.pkl'
+DATA_OLINK = DATA_PROCESSED / 'olink_cflow.pkl'
 DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv"
 DATA_KEYS_UPDATE = DATA_FOLDER /  "Validation Results" / 'cflow_id_update.xlsx'
 DATA_DUPLICATES = DATA_FOLDER /  "Validation Results" / 'duplicates.xlsx'
