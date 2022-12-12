@@ -79,7 +79,7 @@ rename_dict = {
     '90days': '90days',
     '180days': '180days',
     'AdmittetBlood': 'AdmittetBlood',
-    'DateFirstAdmission': 'DateAdm',
+    'DateFirstAdmission': 'DateFirstAdmission', # 'DateAdm',
     'Cause': 'Cause',
     'TimeToAdm': 'TimeToAdm',
     'Adm180': 'Adm180',

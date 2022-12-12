@@ -256,7 +256,7 @@ mask = clinic["DateInflSample"].isna()
 clinic.loc[mask] if mask.sum() else "All included samples have an inflammation sample date"
 
 # %% [markdown]
-# ## DeathHealthyer time
+# ## Death over time
 #
 # - one plot with absolute time axis
 # - one plot relative to diagnosis date
@@ -421,12 +421,22 @@ olink.loc[:, olink.isna().any()].describe()
 # - death only has right censoring, no drop-out
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
 #
-# First some cleaning
+# CirkaFlow specifics:
+# - `DateFirstAdmission`: If `MORS` or `NA`, the patients should be excluded as the information is either
+#    1. not valid due to death during inclusion period (`MORS`)
+#    2. the patient's hospitialization history could not be recovered (`NA`)
 
 
 # %%
-clinic["DateAdm"]  = clinic["DateAdm"].replace({'None': np.nan, 'MORS': np.nan})
+# clinic["DateAdm"]  = clinic["DateAdm"].replace({'None': np.nan, 'MORS': np.nan})
+clinic["isNA|MORS"]  = clinic["DateFirstAdmission"].replace({np.nan: True, 'MORS': True})
+clinic.loc[clinic["isNA|MORS"] != True, "isNA|MORS"] = False
+clinic["DateAdm"]  = clinic["DateFirstAdmission"].replace({'None': np.nan, 'MORS': np.nan})
 
+
+# %%
+clinic["isNA|MORS"] = clinic["isNA|MORS"].astype(bool)
+clinic["isNA|MORS"].value_counts()
 
 # %% [markdown]
 # For these individuals, the admission time is censored as the persons died before.
@@ -563,18 +573,30 @@ targets = pd.DataFrame(targets)
 targets.describe()
 
 # %%
-to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
-to_exclude.sum()
+to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True #
+clinic.loc[to_exclude]
 
 # %%
 to_exclude = clinic["LiverAdm180"].isna() & targets["dead180infl"] == True
-to_exclude.sum()
+clinic.loc[to_exclude]
+
+# %%
+to_exclude = clinic["isNA|MORS"]
+clinic.loc[to_exclude]
+
+# %% [markdown]
+# Admission within 30 days after Inflammation sample?
+#
+# - na or MORS in DateAdm (FirstDateAdm)
+# - expectation 4 patients to be excluded (82)
 
 # %%
 for col_adm, col_death in zip(['Adm180',      'Adm90',       'LiverAdm90',  'LiverAdm180'], 
                               ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
-    to_exclude = clinic[col_adm].isna() & targets[col_death] == True
-    clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0)
+    # to_exclude = clinic[col_adm].isna() & targets[col_death] == True
+    to_exclude = clinic["isNA|MORS"]
+    # clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0) 
+    clinic.loc[to_exclude, col_adm] = np.nan
     
 clinic.loc[:, mask].describe()
 
@@ -670,4 +692,4 @@ files_out[config.fname_pkl_cirkaflow_clinic_num.stem] = config.fname_pkl_cirkafl
 clinic[numeric_cols].to_pickle(config.fname_pkl_cirkaflow_clinic_num)
 
 # %%
-files_out
+src.io.print_files(files_out)

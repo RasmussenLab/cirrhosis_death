@@ -37,6 +37,7 @@ feat_in_both
 
 # %%
 clinic = pd.concat([clinic[feat_in_both], clinic_cirkaflow[feat_in_both]])
+clinic
 
 # %%
 olink = files_in['olink'].values()
