@@ -23,8 +23,13 @@ rule all:
     input: 
         expand(
             ["{out_path}/{cohort}/{target}/1_explorative_analysis.ipynb",
-            #  "{out_path}/{target}/2_tree.ipynb",
-             "{out_path}/prodoc/{target}/clinic_train_val_comparison.html",],
+             #"{out_path}/{target}/2_tree.ipynb",
+             "{out_path}/prodoc/{target}/clinic_train_val_comparison.html",
+             "{out_path}/{cohort}/{target}/1_PC1_vs_PC2.pdf",
+             "{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
+             "{out_path}/{cohort}/clinic_data_profil.html",
+             "{out_path}/{cohort}/olink_data_profil.html",
+             ],
             out_path=folder_reports,
             target=TARGETS,
             cohort=['prodoc', 'cirkaflow']),
@@ -33,9 +38,7 @@ rule all:
             out_path=folder_reports,
             target=TARGETS,
             feat_sets=project_config.feat_sets),
-        f"{folder_reports}/prodoc_train_val"f"/1_explorative_analysis.ipynb",
-        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
-        profiling_report_olink=f"{folder_reports}/olink_data_profil.html"
+        f"{folder_reports}/data_prodoc/train_val"f"/1_explorative_analysis.ipynb"
 
 
 
@@ -48,7 +51,7 @@ rule validation_data:
     output:
         olink_prodoc_val='olink_prodoc_val.xlsx',
         olink_cflow='olink_cflow.xlsx',
-        nb=f"{folder_reports}/{nb}",
+        nb=f"{folder_reports}/data_circaflow/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -56,19 +59,47 @@ rule validation_data:
 
 
 nb='0_load_data_prodoc.ipynb'
-rule prepare_data:
+rule prepare_data_prodoc:
     input:
         nb=nb,
         olink_prodoc_val='olink_prodoc_val.xlsx',
         DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-11-24.xlsx',
-        DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
-        DATA_OLINK_VAL = DATA_FOLDER / 'olink_prodoc_val.xlsx'
+        DATA_OLINK=DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
+        DATA_OLINK_VAL=DATA_FOLDER / 'olink_prodoc_val.xlsx'
     output:
+        lifelines="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/lifelines.pdf",
+        death_vs_alive_diagonose_dates="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/death_vs_alive_diagonose_dates",
+        timing_deaths_over_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/timing_deaths_over_time.pdf",
+        died_before_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/died_before_adm.xlsx",
+        km_plot_death="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_death.pdf",
+        deaths_along_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/deaths_along_time.pdf",
+        km_plot_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_admission.pdf",
+        targets="S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed/targets.pkl",
         clinic_pkl_train=fname_pkl_clinic, 
-        olink_pkl_train=fname_pkl_olink,
-        clinic_pkl_val=fname_pkl_val_clinic,
-        clinic_pkl_olink_all=fname_pkl_prodoc_olink,
-        clinic_pkl_clinic_all_num=project_config.fname_pkl_prodoc_clinic_num,
+        olink=fname_pkl_olink,
+        val_clinic=fname_pkl_val_clinic,
+        fname_pkl_prodoc_clinic_num=project_config.fname_pkl_prodoc_clinic_num,
+        prodoc_olink_all=fname_pkl_prodoc_olink,
+        nb=f"{folder_reports}/data_prodoc/{nb}",
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
+nb='0_load_data_cirkaflow.ipynb'
+rule prepare_data_cirkaflow:
+    input:
+        nb=nb,
+        DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx',
+        DATA_OLINK = DATA_FOLDER / 'olink_cflow.pkl',
+        DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv",
+        DATA_KEYS_UPDATE = DATA_FOLDER /  "Validation Results" / 'cflow_id_update.xlsx',
+        DATA_DUPLICATES = DATA_FOLDER /  "Validation Results" / 'duplicates.xlsx'
+    output:       
+        clinic=project_config.fname_pkl_cirkaflow_clinic,
+        olink=project_config.fname_pkl_cirkaflow_olink,
+        clinic_num=project_config.fname_pkl_cirkaflow_clinic_num,
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
@@ -76,22 +107,91 @@ rule prepare_data:
         " && jupyter nbconvert {output.nb} --to html"
 
 
+nb='0_training_data_all.ipynb'
+rule combine_all_data:
+    input:
+        project_config.fname_pkl_prodoc_clinic_num,
+        project_config.fname_pkl_cirkaflow_clinic_num,
+        project_config.fname_pkl_prodoc_olink,
+        project_config.fname_pkl_cirkaflow_olink,
+        nb=nb
+    output:
+        project_config.fname_pkl_all_olink,
+        project_config.fname_pkl_all_clinic_num,
+        nb=f"{folder_reports}/{nb}",
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
+##########################################################################################
+### Differential analysis and data profiling
+
+data_cohort = {'cirkaflow': dict(olink=fname_pkl_cirkaflow_olink,
+                            clinic=fname_pkl_cirkaflow_clinic),
+          'prodoc': dict(olink=fname_pkl_prodoc_olink,
+                        clinic=fname_pkl_prodoc_clinic)}
 
 rule profile_data:
     input:
-        clinic_pkl_train=fname_pkl_clinic, 
-        olink_pkl_train=fname_pkl_olink,
+        olink=lambda w: data_cohort[w.cohort]['olink'], 
+        clinic=lambda w: data_cohort[w.cohort]['clinic'],
     output:
-        profiling_report_clinic=f"{folder_reports}/clinic_data_profil.html",
-        profiling_report_olink=f"{folder_reports}/olink_data_profil.html",
+        profiling_report_clinic="{out_path}/{cohort}/clinic_data_profil.html",
+        profiling_report_olink="{out_path}/{cohort}/olink_data_profil.html",
     shell:
-        "pandas_profiling {input.clinic_pkl_train}  {output.profiling_report_clinic} -m"
-        " && pandas_profiling {input.olink_pkl_train}  {output.profiling_report_olink} -m"
+        "pandas_profiling {input.clinic}  {output.profiling_report_clinic} -m"
+        " && pandas_profiling {input.olink}  {output.profiling_report_olink} -m"
+
+
+nb='1_explorative_analysis.ipynb'
+rule differential_analysis:
+    input:
+        olink=lambda w: data_cohort[w.cohort]['olink'], 
+        clinic=lambda w: data_cohort[w.cohort]['clinic'],
+        nb=nb
+    output:
+        nb="{out_path}/{cohort}/{target}"f"/{nb}",
+        pca="{out_path}/{cohort}/{target}/1_PC1_vs_PC2.pdf",
+        table="{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
+    params:
+        folder="{out_path}/{cohort}/{target}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " -r CLINIC {input.clinic}"
+        " -r OLINK {input.olink}"
+        " -r TARGET {wildcards.target}"
+        " -r FOLDER {params.folder}"
+        " && jupyter nbconvert {output.nb} --to html"
+
+
+
+_cont_vars_w_target=','.join(project_config.clinic_data.vars_cont + TARGETS)
+rule differential_analysis_cohort:
+    input:
+        olink=project_config.fname_pkl_prodoc_olink,
+        clinic=project_config.fname_pkl_prodoc_clinic,
+        nb=nb
+    output:
+        nb=f"{folder_reports}/data_prodoc/train_val"f"/{nb}"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " -r CLINIC {input.clinic}"
+        " -r OLINK {input.olink}"
+        f" -r TARGET {project_config.COMPARE_PRODOC}"
+        f" -r clinic_cont {_cont_vars_w_target}"
+        " && jupyter nbconvert {output.nb} --to html"
+
+##########################################################################################
+### Model Training
 
 nb="4_compare_splits.ipynb"
 rule compare_train_val:
     input:
-        train=fname_pkl_clinic,
+        train=fname_pkl_clinic, # needs update
         val=fname_pkl_val_clinic,
         nb=nb
     output:
@@ -107,44 +207,6 @@ rule compare_train_val:
         " -r FOLDER {params.folder}"
         " -r name_report clinic_train_val_comparison"
 
-
-data_cohort = {'cirkaflow': dict(olink=fname_pkl_cirkaflow_olink,
-                            clinic=fname_pkl_cirkaflow_clinic),
-          'prodoc': dict(olink=fname_pkl_prodoc_olink,
-                        clinic=fname_pkl_prodoc_clinic)}
-
-nb='1_explorative_analysis.ipynb'
-rule differential_analysis:
-    input:
-        olink=lambda w: data_cohort[w.cohort]['olink'], #fname_pkl_olink,
-        clinic=lambda w: data_cohort[w.cohort]['clinic'], #fname_pkl_clinic,
-        nb=nb
-    output:
-        nb="{out_path}/{cohort}/{target}"f"/{nb}"
-    shell:
-        "papermill {input.nb} {output.nb}"
-        " --inject-paths"
-        " -r CLINIC {input.clinic}"
-        " -r OLINK {input.olink}"
-        " -r TARGET {wildcards.target}"
-        " && jupyter nbconvert {output.nb} --to html"
-
-_cont_vars_w_target=','.join(project_config.clinic_data.vars_cont + TARGETS)
-rule differential_analysis_cohort:
-    input:
-        olink=project_config.fname_pkl_prodoc_olink,
-        clinic=project_config.fname_pkl_prodoc_clinic,
-        nb=nb
-    output:
-        nb=f"{folder_reports}/prodoc_train_val"f"/{nb}"
-    shell:
-        "papermill {input.nb} {output.nb}"
-        " --inject-paths"
-        " -r CLINIC {input.clinic}"
-        " -r OLINK {input.olink}"
-        f" -r TARGET {project_config.COMPARE_PRODOC}"
-        f" -r clinic_cont {_cont_vars_w_target}"
-        " && jupyter nbconvert {output.nb} --to html"
 
 nb='2_tree.ipynb'
 rule decision_tree:
@@ -179,7 +241,5 @@ rule log_reg:
         " -r feat_set_to_consider {wildcards.feat_sets}"
         " -r VAL_IDS_query Cflow"
         " -r FOLDER {params.folder}"
-        # use_val_split = True
-        # FOLDER = ''
         " && jupyter nbconvert {output.nb} --to html"
 
