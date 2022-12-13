@@ -42,7 +42,7 @@ import njab
 
 # %% tags=["parameters"]
 TARGET = 'dead180infl'
-FOLDER = ''
+FOLDER = Path(config.folder_reports) / 'prodoc' / TARGET
 CLINIC=config.fname_pkl_prodoc_clinic
 OLINK=config.fname_pkl_prodoc_olink
 val_ids:str='' # List of comma separated values or filepath
@@ -54,7 +54,7 @@ da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyper
 # %%
 # TARGET = 'dead180infl'
 # # TARGET = 'hasLiverAdm180'
-# FOLDER = Path(config.folder_reports) / f'DA_{CLINIC.stem}' / TARGET
+# FOLDER = Path(config.folder_reports) / 'cirkaflow' / TARGET
 # CLINIC = config.fname_pkl_cirkaflow_clinic
 # OLINK = config.fname_pkl_cirkaflow_olink
 
@@ -64,6 +64,8 @@ da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyper
 # %%
 if not FOLDER:
     FOLDER = Path(config.folder_reports) / TARGET
+else:
+    FOLDER = Path(FOLDER)
 FOLDER.mkdir(exist_ok=True, parents=True)
 FOLDER
 
@@ -209,6 +211,7 @@ for categorical_column in categorical_columns:
         categorical_column].cat.codes
     
 desc_ancova = clinic_ancova.describe()
+desc_ancova.to_excel(writer, "covars", float_format='%.4f')
 desc_ancova
 
 # %%

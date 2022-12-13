@@ -69,6 +69,14 @@ FOLDER = ''
 # feat_set_to_consider = "SCORES_ONLY"
 # FOLDER = "S:/SUND-CBMR-RegH-cohorts/ProDoc/reports_dev/prodoc/hasLiverAdm180/SCORES_ONLY"
 
+# # Parameters
+# TARGET = "hasLiverAdm180"
+# CLINIC = "S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed/all_clinic_num.pkl"
+# OLINK = "S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed/all_olink.pkl"
+# feat_set_to_consider = "SCORES_ONLY"
+# VAL_IDS_query = "Cflow"
+# FOLDER = "S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/prodoc/hasLiverAdm180/SCORES_ONLY"
+
 # %% [markdown]
 # # Setup
 # ## Load data
@@ -78,6 +86,9 @@ clinic = pd.read_pickle(CLINIC)
 cols_clinic = src.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
+
+# %%
+olink.shape, clinic.shape
 
 # %% [markdown]
 # ## Target
@@ -206,6 +217,9 @@ X_val = njab.sklearn.transform_DataFrame(X_val, median_imputer.transform)
 
 # %%
 assert X.isna().sum().sum()  == 0
+
+# %%
+X.shape, X_val.shape
 
 # %% [markdown]
 # ## Principal Components
