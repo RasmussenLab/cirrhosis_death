@@ -58,16 +58,16 @@ rule prepare_data_prodoc:
         DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx',
         DATA_OLINK=DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
     output:
-        lifelines="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/lifelines.pdf",
-        death_vs_alive_diagonose_dates="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/death_vs_alive_diagonose_dates.pdf",
-        timing_deaths_over_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/timing_deaths_over_time.pdf",
-        died_before_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/died_before_adm.xlsx",
-        km_plot_death="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_death.pdf",
-        deaths_along_time="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/deaths_along_time.pdf",
-        km_plot_admission="S:/SUND-CBMR-RegH-cohorts/ProDoc/reports/data_prodoc/km_plot_admission.pdf",
-        targets="S:/SUND-CBMR-RegH-cohorts/ProDoc/data/processed/targets.pkl",
+        lifelines=FOLDER_REPORTS/"data_prodoc/lifelines.pdf",
+        death_vs_alive_diagonose_dates=FOLDER_REPORTS/"data_prodoc/death_vs_alive_diagonose_dates.pdf",
+        timing_deaths_over_time=FOLDER_REPORTS/"data_prodoc/timing_deaths_over_time.pdf",
+        died_before_admission=FOLDER_REPORTS/"data_prodoc/died_before_adm.xlsx",
+        km_plot_death=FOLDER_REPORTS/"data_prodoc/km_plot_death.pdf",
+        deaths_along_time=FOLDER_REPORTS/"data_prodoc/deaths_along_time.pdf",
+        km_plot_admission=FOLDER_REPORTS/"data_prodoc/km_plot_admission.pdf",
+        targets=DATA_PROCESSED/"targets.pkl",
         clinic_pkl_train=project_config.fname_pkl_clinic, 
-        olink=project_config.fname_pkl_olink,
+        olink_pkl_train=project_config.fname_pkl_olink,
         val_clinic=project_config.fname_pkl_val_clinic,
         fname_pkl_prodoc_clinic_num=project_config.fname_pkl_prodoc_clinic_num,
         fname_pkl_prodoc_clinic=project_config.fname_pkl_prodoc_clinic,
@@ -92,6 +92,7 @@ rule prepare_data_cirkaflow:
         clinic=project_config.fname_pkl_cirkaflow_clinic,
         olink=project_config.fname_pkl_cirkaflow_olink,
         clinic_num=project_config.fname_pkl_cirkaflow_clinic_num,
+        timing_deaths_over_time=FOLDER_REPORTS/"data_cirkaflow/timing_deaths_over_time.pdf",
         nb=f"{folder_reports}/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
@@ -120,10 +121,10 @@ rule combine_all_data:
 ##########################################################################################
 ### Differential analysis and data profiling
 
-data_cohort = {'cirkaflow': dict(olink=project_config.fname_pkl_cirkaflow_olink,
-                            clinic=project_config.fname_pkl_cirkaflow_clinic),
-          'prodoc': dict(olink=project_config.fname_pkl_prodoc_olink,
-                        clinic=project_config.fname_pkl_prodoc_clinic)}
+data_cohort = {'cirkaflow': dict(olink=project_config.fname_pkl_cirkaflow_olink.as_posix(),
+                            clinic=project_config.fname_pkl_cirkaflow_clinic.as_posix()),
+          'prodoc': dict(olink=project_config.fname_pkl_prodoc_olink.as_posix(),
+                        clinic=project_config.fname_pkl_prodoc_clinic.as_posix())}
 
 rule profile_data:
     input:
@@ -133,8 +134,8 @@ rule profile_data:
         profiling_report_clinic="{out_path}/{cohort}/clinic_data_profil.html",
         profiling_report_olink="{out_path}/{cohort}/olink_data_profil.html",
     shell:
-        "pandas_profiling {input.clinic}  {output.profiling_report_clinic} -m"
-        " && pandas_profiling {input.olink}  {output.profiling_report_olink} -m"
+        "pandas_profiling {input.clinic} {output.profiling_report_clinic} -m"
+        " && pandas_profiling {input.olink} {output.profiling_report_olink} -m"
 
 
 nb='1_explorative_analysis.ipynb'
@@ -168,12 +169,15 @@ rule differential_analysis_cohort:
         nb=nb
     output:
         nb=f"{folder_reports}/data_prodoc/train_val"f"/{nb}"
+    params:
+        folder=f"{folder_reports}/data_prodoc/train_val"
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " -r CLINIC {input.clinic}"
         " -r OLINK {input.olink}"
         f" -r TARGET {project_config.COMPARE_PRODOC}"
+        " -r FOLDER {params.folder}"
         f" -r clinic_cont {_cont_vars_w_target}"
         " && jupyter nbconvert {output.nb} --to html"
 
