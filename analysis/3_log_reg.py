@@ -174,7 +174,8 @@ if VAL_IDS:
 
 # %%
 if not FOLDER:
-    FOLDER = Path(config.folder_reports) / TARGET / feat_set_to_consider
+    FOLDER = Path(
+        config.folder_reports) / 'prodoc' / TARGET / feat_set_to_consider
     FOLDER.mkdir(exist_ok=True, parents=True)
 else:
     FOLDER = Path(FOLDER)
@@ -307,11 +308,19 @@ cv_feat = njab.sklearn.find_n_best_features(
     name=TARGET,
     groups=y,
     n_features_max=n_features_max,
-    fit_params=dict(sample_weight=weights)
-)
+    scoring=[
+        'precision', 'recall', 'f1', 'balanced_accuracy', 'roc_auc',
+        'average_precision', 'neg_log_loss'
+    ],
+    return_train_score=True,
+    fit_params=dict(sample_weight=weights))
 cv_feat = cv_feat.groupby('n_features').agg(['mean', 'std'])
 cv_feat.to_excel(writer, 'CV', float_format='%.3f')
 cv_feat
+
+# %%
+AIC = 2 * cv_feat.index.to_series() + 2 * cv_feat[('train_neg_log_loss', 'mean')]
+AIC
 
 # %%
 mask = cv_feat.columns.levels[0].str[:4] == 'test'
@@ -427,7 +436,10 @@ y_pred_val = njab.sklearn.scoring.get_custom_pred(
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-_.to_excel(writer, f"CM_test_cutoff_{cutoff:.3f}")
+_.columns = pd.MultiIndex.from_tuples([
+    (t[0] + f" - {cutoff:.3f}", t[1]) for t in _.columns
+])
+_.to_excel(writer, f"CM_test_cutoff_adapted")
 _
 
 # %%
@@ -447,6 +459,9 @@ y_pred_val = get_pred(clf=results_model.model,
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
 _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+_.columns = pd.MultiIndex.from_tuples([
+    (t[0] + f" - {0.5}", t[1]) for t in _.columns
+])
 _.to_excel(writer, "CM_test_cutoff_0.5")
 _
 
@@ -486,8 +501,6 @@ pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET]).agg({'dead': ['c
 pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 
-# %%
-writer.close()
 # %% [markdown]
 # ## Plot TP, TN, FP and FN on PCA plot
 
@@ -499,10 +512,10 @@ embedding = pd.DataFrame(embedding, index=X_scaled.index, columns=['UMAP 1', 'UM
 ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
 
 # %%
+predictions['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
 predictions['label'] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x['true'], x[model_name]),
                       axis=1)
-
 mask = predictions[['true', model_name]].sum(axis=1).astype(bool)
 predictions.loc[mask].sort_values('score', ascending=False)
 
@@ -512,10 +525,20 @@ embedding_val = pd.DataFrame(reducer.transform(X_val_scaled[results_model.select
 embedding_val.sample(3)
 
 # %%
-pred_train = y.to_frame('true').join(get_pred(results_model.model, splits.X_train[results_model.selected_features]).rename(model_name))
-pred_train['label'] = pred_train.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
+pred_train = (
+    y.to_frame('true')
+    # .join(get_score(clf=results_model.model, X=splits.X_train[results_model.selected_features], pos=1))
+    .join(score.rename('score')).join(
+        get_pred(
+            results_model.model,
+            splits.X_train[results_model.selected_features]).rename(model_name))
+)
+pred_train['dead'] = clinic['dead']
+pred_train['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
+pred_train['label'] = pred_train.apply(
+    lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x['true'], x[model_name]),
-                      axis=1)
+    axis=1)
 pred_train.sample(5)
 
 # %%
@@ -543,7 +566,19 @@ files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 
 # %% [markdown]
+# ## Annotation of Errors for manuel analysis
+
+# %%
+_ = X[results_model.selected_features].join(pred_train).to_excel(writer, sheet_name='pred_train_annotated', float_format="%.3f")
+_ = X_val[results_model.selected_features].join(predictions).to_excel(writer, sheet_name='pred_test_annotated', float_format="%.3f")
+
+# %% [markdown]
 # ## Outputs
 
 # %%
+writer.close()
+
+# %%
 files_out
+
+# %%
