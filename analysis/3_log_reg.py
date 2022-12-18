@@ -288,11 +288,22 @@ else:
 # 2. Retrain best model configuration using entire train split and evalute on test split
 
 # %%
+# # Scaled
+splits = Splits(X_train=X_scaled,
+                X_test=scaler.transform(X_val),
+                 y_train=y, y_test=y_val)
+
+# splits = Splits(X_train=X,
+#                 X_test=X_val,
+#                 y_train=y, y_test=y_val)
+
+model=sklearn.linear_model.LogisticRegression()
+
+# %%
 cv_feat = njab.sklearn.find_n_best_features(
-    X=X_scaled,
-    # X=X,
-    y=y,
-    model=sklearn.linear_model.LogisticRegression(),
+    X=splits.X_train,
+    y=splits.y_train,
+    model=model,
     name=TARGET,
     groups=y,
     n_features_max=n_features_max,
@@ -311,17 +322,20 @@ n_feat_best.to_excel(writer, 'n_feat_best')
 n_feat_best
 
 # %%
-splits = Splits(X_train=X_scaled, X_test=scaler.transform(X_val), y_train=y, y_test=y_val)
-# splits = Splits(X_train=X, X_test=X_val, y_train=y, y_test=y_val)
 results_model = njab.sklearn.run_model(
-    splits,
+    model=model,
+    splits=splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
     n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
     fit_params=dict(sample_weight=weights)
 )
+
 results_model.name = model_name
 
+
+# %%
+results_model.selected_features
 
 # %%
 ax = plot_auc(results_model, figsize=(4,2))
