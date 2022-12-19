@@ -32,6 +32,8 @@ import umap
 import sklearn
 import sklearn.impute
 from sklearn.metrics import precision_recall_curve, roc_curve
+from sklearn.metrics import make_scorer, log_loss
+import statsmodels.api as sm
 
 import njab.sklearn
 from njab.sklearn import StandardScaler
@@ -298,9 +300,18 @@ splits = Splits(X_train=X_scaled,
 #                 X_test=X_val,
 #                 y_train=y, y_test=y_val)
 
-model=sklearn.linear_model.LogisticRegression()
+model=sklearn.linear_model.LogisticRegression(penalty='none')
 
 # %%
+scoring = [
+    'precision', 'recall', 'f1', 'balanced_accuracy', 'roc_auc',
+    'average_precision'
+]
+scoring = {k: k for k in scoring}
+# do not average log loss for AIC and BIC calculations
+scoring['log_loss'] = make_scorer(log_loss,
+                                      greater_is_better=True,
+                                      normalize=False)
 cv_feat = njab.sklearn.find_n_best_features(
     X=splits.X_train,
     y=splits.y_train,
@@ -308,19 +319,45 @@ cv_feat = njab.sklearn.find_n_best_features(
     name=TARGET,
     groups=y,
     n_features_max=n_features_max,
-    scoring=[
-        'precision', 'recall', 'f1', 'balanced_accuracy', 'roc_auc',
-        'average_precision', 'neg_log_loss'
-    ],
+    scoring=scoring,
     return_train_score=True,
     fit_params=dict(sample_weight=weights))
 cv_feat = cv_feat.groupby('n_features').agg(['mean', 'std'])
-cv_feat.to_excel(writer, 'CV', float_format='%.3f')
+cv_feat
+
+# %% [markdown]
+# Add AIC and BIC for model selection
+
+# %%
+# AIC vs BIC on train and test data with bigger is better
+IC_criteria = pd.DataFrame()
+N_split={'train': round(len(splits.X_train)*0.8), 'test': round(len(splits.X_train)*0.2)}
+
+# IC_criteria[('test_log_loss', 'mean')] = cv_feat[
+#                      ('test_log_loss', 'mean')]
+# IC_criteria[('train_log_loss', 'mean')] = cv_feat[
+#                      ('train_log_loss', 'mean')]
+for _split in ('train', 'test'):
+    
+    IC_criteria[(f'{_split}_neg_AIC',
+                 'mean')] = - (2 * cv_feat.index.to_series() - 2 * cv_feat[
+                     (f'{_split}_log_loss', 'mean')])
+    IC_criteria[(
+        f'{_split}_neg_BIC',
+        'mean')] = -(cv_feat.index.to_series() * np.log(N_split[_split]) - 2 * cv_feat[
+            (f'{_split}_log_loss', 'mean')])
+IC_criteria.columns = pd.MultiIndex.from_tuples(IC_criteria.columns)
+IC_criteria
+
+# %%
+cv_feat = cv_feat.join(IC_criteria)
+cv_feat = cv_feat.filter(regex="train|test", axis=1).style.highlight_max(
+    axis=0, subset=pd.IndexSlice[:, pd.IndexSlice[:, 'mean']])
 cv_feat
 
 # %%
-AIC = 2 * cv_feat.index.to_series() + 2 * cv_feat[('train_neg_log_loss', 'mean')]
-AIC
+cv_feat.to_excel(writer, 'CV', float_format='%.3f')
+cv_feat = cv_feat.data
 
 # %%
 mask = cv_feat.columns.levels[0].str[:4] == 'test'
@@ -335,7 +372,8 @@ results_model = njab.sklearn.run_model(
     model=model,
     splits=splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
-    n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
+    # n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
+     n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
     fit_params=dict(sample_weight=weights)
 )
@@ -343,22 +381,38 @@ results_model = njab.sklearn.run_model(
 results_model.name = model_name
 
 
-# %%
-results_model.selected_features
+# %% [markdown]
+# ### ROC
 
 # %%
 ax = plot_auc(results_model, figsize=(4,2))
 files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
+# %% [markdown]
+# ### PRC
+
 # %%
 ax = plot_prc(results_model, figsize=(4,2))
 files_out['PRAUC'] = FOLDER / 'plot_prauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 
+# %% [markdown]
+# ### Coefficients with/out std. errors
+
 # %%
-# https://www.statsmodels.org/dev/discretemod.html
-np.exp(results_model.model.coef_)
+pd.DataFrame({'coef': results_model.model.coef_.flatten(), 'name': results_model.model.feature_names_in_})
+
+# %%
+results_model.model.intercept_
+
+# %%
+sm_logit = sm.Logit(endog=splits.y_train, exog=sm.add_constant(splits.X_train[results_model.selected_features]))
+sm_logit = sm_logit.fit()
+sm_logit.summary()
+
+# %% [markdown]
+# ### Selected Features
 
 # %%
 des_selected_feat = splits.X_train[results_model.selected_features].describe()
@@ -373,7 +427,7 @@ fig.tight_layout()
 njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %% [markdown]
-# Plot training data scores
+# ### Plot training data scores
 
 
 # %%
@@ -392,7 +446,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # pred_bins
 
 # %% [markdown]
-# Test data scores
+# ### Test data scores
 
 # %%
 score_val = get_score(clf=results_model.model, X=splits.X_test[results_model.selected_features], pos=1)
@@ -408,6 +462,30 @@ ax.locator_params(axis='y', integer=True)
 files_out['hist_score_test_target.pdf'] = FOLDER / 'hist_score_test_target.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 # pred_bins_val
+
+# %% [markdown]
+# ## KM plot
+
+# %%
+y_km = clinic["dead"] if 'dead' in TARGET else clinic["LiverAdm180"] # ToDo: Make less error prone
+
+pred_train = get_pred(clf=results_model.model, X=splits.X_train[results_model.selected_features]).astype(bool)
+ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index, "DaysToDeathFromInfl"],
+                            y=y_km.loc[pred_train.index], 
+                          pred=pred_train,
+                            xlabel='Days since inflammation sample',
+                            ylabel=f'rate {y_km.name}')
+
+ax.set_title(
+    f'KM curve for model (target={TARGET})'
+)
+ax.legend([
+    f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
+    f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
+])
+fname = FOLDER / f'KM_plot_model.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
 
 # %% [markdown]
 # ## Performance evaluations
@@ -580,5 +658,3 @@ writer.close()
 
 # %%
 files_out
-
-# %%
