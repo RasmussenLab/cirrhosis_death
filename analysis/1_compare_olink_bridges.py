@@ -43,7 +43,7 @@ import njab
 # %%
 TARGET = 'project'
 FOLDER = Path(config.folder_reports) / 'bridges'
-OLINK=config.fname_pkl_prodoc_olink
+OLINK = config.fname_pkl_prodoc_olink
 
 # %%
 inputs = dict()
@@ -93,11 +93,9 @@ assert olink.isna().sum().sum() == 0
 # olink.loc[:, olink.isna().any()].describe()
 
 # %%
-ana_diff_olink = njab.stats.groups_comparision.diff_analysis(olink,
-                                         happend,
-                                         event_names=('2nd batch',
-                                                      '1st batch')).sort_values(
-                                                          ('ttest', 'p-val'))
+ana_diff_olink = njab.stats.groups_comparision.diff_analysis(
+    olink, happend, event_names=('2nd batch', '1st batch')).sort_values(
+        ('ttest', 'p-val'))
 ana_diff_olink.to_excel(FOLDER / "DA_batches.xlsx")
 
 ana_diff_olink.head(20)
@@ -149,8 +147,6 @@ fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
 
 # %%
-ax = seaborn.scatterplot(x=PCs.iloc[:, 0],
-                         y=PCs.iloc[:, 1],
-                         hue=badge_tag)
+ax = seaborn.scatterplot(x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=badge_tag)
 fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')

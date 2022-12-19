@@ -53,7 +53,7 @@ DATA_PROCESSED.mkdir(exist_ok=True, parents=True)
 FOLDER_REPORTS = Path(config.folder_reports) / 'data_prodoc'
 FOLDER_REPORTS.mkdir(exist_ok=True, parents=True)
 
-files_out=dict()
+files_out = dict()
 
 config.STUDY_ENDDATE
 
@@ -105,11 +105,13 @@ din_a4 = (8.27 * 2, 11.69 * 2)
 njab.plotting.make_large_descriptors(32)
 fig, ax = plt.subplots(figsize=din_a4)
 
-src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'), start_col='DateInflSample', ax=ax)
+src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'),
+                            start_col='DateInflSample',
+                            ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 njab.plotting.set_font_sizes('x-small')
-files_out['lifelines'] = FOLDER_REPORTS/ 'lifelines.pdf'
+files_out['lifelines'] = FOLDER_REPORTS / 'lifelines.pdf'
 savefig(fig, files_out['lifelines'])
 
 # %%
@@ -117,53 +119,90 @@ clinic.dead.value_counts()
 
 # %%
 fig, axes = plt.subplots(2, sharex=True)
-ax =  axes[0]
+ax = axes[0]
 ax.set_yticks([])
 
 ax = clinic.loc[clinic.dead].astype({
     'dead': 'category'
-}).plot.scatter(x="DateInflSample", y="dead", c='blue', rot=45, ax=ax, ylabel='dead')
-ax =  axes[1]
+}).plot.scatter(x="DateInflSample",
+                y="dead",
+                c='blue',
+                rot=45,
+                ax=ax,
+                ylabel='dead')
+ax = axes[1]
 # ax.axes.yaxis.set_visible(False)
 ax.set_yticks([])
 ax = clinic.loc[~clinic.dead].astype({
     'dead': 'category'
-}).plot.scatter(x="DateInflSample", y="dead", c='blue', rot=45, ax=ax, ylabel='alive')
+}).plot.scatter(x="DateInflSample",
+                y="dead",
+                c='blue',
+                rot=45,
+                ax=ax,
+                ylabel='alive')
 _ = fig.suptitle("Inclusion date by survival status")
-files_out['death_vs_alive_diagonose_dates'] = FOLDER_REPORTS / 'death_vs_alive_diagonose_dates'
+files_out[
+    'death_vs_alive_diagonose_dates'] = FOLDER_REPORTS / 'death_vs_alive_diagonose_dates'
 savefig(fig, files_out['death_vs_alive_diagonose_dates'])
 
 # %%
 ax = clinic.astype({
     'dead': 'category'
-}).plot.scatter(x="DateInflSample", y='DateDeath', c="dead", cmap='Paired', rot=45, s=3, sharex=False)
+}).plot.scatter(x="DateInflSample",
+                y='DateDeath',
+                c="dead",
+                cmap='Paired',
+                rot=45,
+                s=3,
+                sharex=False)
 # ticks = ax.get_xticks()
 # ax.set_xticklabels(ax.get_xticklabels(),  horizontalalignment='right')
 # ax.set_xticks(ticks)
 fontsize = 'xx-small'
-min_date, max_date = clinic["DateInflSample"].min(), clinic["DateInflSample"].max()
-ax.plot([min_date, max_date],
-        [min_date, max_date],
-        'k-', lw=1)
-_ = ax.annotate('date', [min_date, min_date + datetime.timedelta(days=20)], fontsize=fontsize, rotation=25)
-offset, rot = 20 , 25
-delta=90
-_ = ax.plot([min_date, max_date],
-        [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
-        'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
-delta=180
-ax.plot([min_date, max_date],
-        [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
-        'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
-delta=360
-ax.plot([min_date, max_date],
-        [min_date + datetime.timedelta(days=delta), max_date+ datetime.timedelta(days=delta)],
-        'k-', lw=1)
-_ = ax.annotate(f'+ {delta} days', [min_date, min_date + datetime.timedelta(days=delta+20)], fontsize=fontsize, rotation=25)
+min_date, max_date = clinic["DateInflSample"].min(
+), clinic["DateInflSample"].max()
+ax.plot([min_date, max_date], [min_date, max_date], 'k-', lw=1)
+_ = ax.annotate('date', [min_date, min_date + datetime.timedelta(days=20)],
+                fontsize=fontsize,
+                rotation=25)
+offset, rot = 20, 25
+delta = 90
+_ = ax.plot([min_date, max_date], [
+    min_date + datetime.timedelta(days=delta),
+    max_date + datetime.timedelta(days=delta)
+],
+            'k-',
+            lw=1)
+_ = ax.annotate(f'+ {delta} days',
+                [min_date, min_date + datetime.timedelta(days=delta + 20)],
+                fontsize=fontsize,
+                rotation=25)
+delta = 180
+ax.plot([min_date, max_date], [
+    min_date + datetime.timedelta(days=delta),
+    max_date + datetime.timedelta(days=delta)
+],
+        'k-',
+        lw=1)
+_ = ax.annotate(f'+ {delta} days',
+                [min_date, min_date + datetime.timedelta(days=delta + 20)],
+                fontsize=fontsize,
+                rotation=25)
+delta = 360
+ax.plot([min_date, max_date], [
+    min_date + datetime.timedelta(days=delta),
+    max_date + datetime.timedelta(days=delta)
+],
+        'k-',
+        lw=1)
+_ = ax.annotate(f'+ {delta} days',
+                [min_date, min_date + datetime.timedelta(days=delta + 20)],
+                fontsize=fontsize,
+                rotation=25)
 fig = ax.get_figure()
-files_out['timing_deaths_over_time'] = FOLDER_REPORTS / 'timing_deaths_over_time.pdf'
+files_out[
+    'timing_deaths_over_time'] = FOLDER_REPORTS / 'timing_deaths_over_time.pdf'
 fig.savefig(files_out['timing_deaths_over_time'])
 
 # %% [markdown]
@@ -200,13 +239,15 @@ clinic[vars_binary] = clinic[vars_binary].astype('category')
 
 # %%
 mask_cols_obj = clinic.dtypes == 'object'
-clinic.loc[:,mask_cols_obj].describe()
+clinic.loc[:, mask_cols_obj].describe()
 
 # %%
-clinic["HbA1c"] = clinic["HbA1c"].replace(to_replace="(NA)", value=np.nan).astype(pd.Int32Dtype())
+clinic["HbA1c"] = clinic["HbA1c"].replace(to_replace="(NA)",
+                                          value=np.nan).astype(pd.Int32Dtype())
 clinic["MaritalStatus"] = clinic["MaritalStatus"].astype('category')
-clinic["HeartDiseaseTotal"] = clinic["HeartDiseaseTotal"].replace(0, 'no').astype('category')
-clinic.loc[:,mask_cols_obj].describe(include='all')
+clinic["HeartDiseaseTotal"] = clinic["HeartDiseaseTotal"].replace(
+    0, 'no').astype('category')
+clinic.loc[:, mask_cols_obj].describe(include='all')
 
 
 # %%
@@ -216,8 +257,10 @@ def get_dummies_yes_no(s, prefix=None):
         1: 'Yes'
     }).astype('category')
 
+
 clinic = clinic.join(get_dummies_yes_no(clinic["DiagnosisPlace"]))
-clinic = clinic.join(get_dummies_yes_no(clinic["MaritalStatus"], prefix='MaritalStatus'))
+clinic = clinic.join(
+    get_dummies_yes_no(clinic["MaritalStatus"], prefix='MaritalStatus'))
 clinic = clinic.join(get_dummies_yes_no(clinic["CauseOfDeath"], prefix='CoD'))
 clinic
 
@@ -229,7 +272,8 @@ etiology_mask_yes = clinic.loc[:, clinic.columns.str.contains("Eti")] == 'Yes'
 etiology_mask_yes.sum(axis=1).value_counts()
 
 # %%
-clinic["EtiNonAlco"] = (clinic["EtiAlco"] == 'No') & (etiology_mask_yes.drop('EtiAlco', axis=1).sum(axis=1).astype(bool))
+clinic["EtiNonAlco"] = (clinic["EtiAlco"] == 'No') & (etiology_mask_yes.drop(
+    'EtiAlco', axis=1).sum(axis=1).astype(bool))
 clinic["EtiNonAlco"] = get_dummies_yes_no(clinic["EtiNonAlco"])[True]
 clinic["EtiNonAlco"].value_counts()
 
@@ -247,7 +291,7 @@ olink.head()
 # Remove additional metadata
 
 # %%
-olink = olink.loc[:,'IL8':]
+olink = olink.loc[:, 'IL8':]
 
 # %% [markdown]
 # Which measurments have missing values
@@ -282,7 +326,8 @@ cols_view = [
     # cols_clinic.DateFirstAdmission,
     cols_clinic.DaysToAdmFromInflSample,
     "dead",
-    "Adm90", "Adm180",
+    "Adm90",
+    "Adm180",
     "Age"
 ]
 
@@ -336,29 +381,32 @@ savefig(fig, files_out['deaths_along_time'])
 # ## Kaplan-Meier plot admissions
 
 # %%
-to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
+to_exclude = clinic[
+    "ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 
 # %%
 clinic["LiverAdm180"].value_counts(dropna=False).sort_index()
 
 # %%
-to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
+to_exclude = clinic[
+    "ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 
 # %%
 kmf = KaplanMeierFitter()
 
 mask = ~to_exclude
 print(f"Based on {mask.sum()} patients")
-kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "LiverAdm180"].fillna(0))
+kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"],
+        event_observed=clinic.loc[mask, "LiverAdm180"].fillna(0))
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(#title='Kaplan Meier curve for liver related admissions',
-              xlim=(0, X_LIMIT),
-              ylim=(0, 1),
-              xlabel='Days since inflammation sample',
-              ylabel='rate no liver related admission',
-              legend=False)
+ax = kmf.plot(  #title='Kaplan Meier curve for liver related admissions',
+    xlim=(0, X_LIMIT),
+    ylim=(0, 1),
+    xlabel='Days since inflammation sample',
+    ylabel='rate no liver related admission',
+    legend=False)
 ax.legend([f"KP admission (N={mask.sum()})", '95% CI'])
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
@@ -372,10 +420,10 @@ savefig(fig, files_out['km_plot_admission'])
 
 # %%
 mask = clinic.columns.str.contains("Adm(90|180)")
-clinic.loc[:,mask].describe() # four targets for liver related admissions
+clinic.loc[:, mask].describe()  # four targets for liver related admissions
 
 # %%
-target_name = {k:f'has{k}' for k in clinic.columns[mask]}
+target_name = {k: f'has{k}' for k in clinic.columns[mask]}
 target_name
 
 # %%
@@ -394,18 +442,21 @@ targets.describe()
 # %%
 # to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
 # to_exclude.sum()
-to_exclude = clinic["ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
+to_exclude = clinic[
+    "ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 to_exclude.sum()
 
 # %%
 clinic.loc[to_exclude]
 
 # %%
-for col_adm, col_death in zip(['Adm180', 'Adm90', 'LiverAdm90', 'LiverAdm180'], 
-                           ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
-    clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0)
+for col_adm, col_death in zip(
+    ['Adm180', 'Adm90', 'LiverAdm90', 'LiverAdm180'],
+    ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
+    clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude,
+                                                  col_adm].fillna(0)
     clinic.loc[to_exclude, col_adm] = np.nan
-    
+
 clinic.loc[:, mask].describe()
 
 # %%
@@ -418,6 +469,7 @@ targets.describe()
 
 # %%
 from src.pandas import combine_value_counts
+
 combine_value_counts(targets)
 
 # %%
@@ -444,7 +496,8 @@ clinic = clinic.join(targets)
 # Date of first Admission is also right-censored
 
 # %%
-time_from_inclusion_to_first_admission = clinic["DateAdm"].fillna(config.STUDY_ENDDATE) - clinic["DateInflSample"]
+time_from_inclusion_to_first_admission = clinic["DateAdm"].fillna(
+    config.STUDY_ENDDATE) - clinic["DateInflSample"]
 time_from_inclusion_to_first_admission.describe()
 
 # %% [markdown]
@@ -453,7 +506,8 @@ time_from_inclusion_to_first_admission.describe()
 # %%
 dead_wo_adm = clinic["DateAdm"].isna() & clinic['dead']
 idx_dead_wo_adm = dead_wo_adm.loc[dead_wo_adm].index
-print('Dead without admission to hospital:', *dead_wo_adm.loc[dead_wo_adm].index)
+print('Dead without admission to hospital:',
+      *dead_wo_adm.loc[dead_wo_adm].index)
 clinic.loc[dead_wo_adm, ["DateAdm", "DateInflSample", cols_clinic.LiverAdm180]]
 
 # %% [markdown]
@@ -504,11 +558,11 @@ clinic.loc[idx_validation].to_pickle(config.fname_pkl_val_clinic)
 # %%
 idx_valid_proDoc = [*idx_overlap, *idx_validation]
 clinic = clinic.loc[idx_valid_proDoc]
-clinic[config.COMPARE_PRODOC] = clinic.index.isin(idx_validation).astype('float')
+clinic[config.COMPARE_PRODOC] = clinic.index.isin(idx_validation).astype(
+    'float')
 files_out[config.fname_pkl_prodoc_clinic.stem] = config.fname_pkl_prodoc_clinic
 clinic.to_pickle(config.fname_pkl_prodoc_clinic)
-olink = pd.concat(
-    [olink.loc[idx_overlap], olink_val.loc[idx_validation]])
+olink = pd.concat([olink.loc[idx_overlap], olink_val.loc[idx_validation]])
 files_out[config.fname_pkl_prodoc_olink.stem] = config.fname_pkl_prodoc_olink
 olink.to_pickle(config.fname_pkl_prodoc_olink)
 
@@ -527,8 +581,10 @@ cols_cat = clinic.columns[cols_cat]
 clinic[cols_cat]
 
 # %%
-encode = {**{k:1 for k in ['Yes', 'yes', 'Male']},
-          **{k:0 for k in ['No', 'no', 'Female']}}
+encode = {
+    **{k: 1 for k in ['Yes', 'yes', 'Male']},
+    **{k: 0 for k in ['No', 'no', 'Female']}
+}
 encode
 
 # %%
@@ -548,7 +604,7 @@ clinic.loc[:, mask]
 
 # %%
 mask = clinic.dtypes == 'datetime64[ns]'
-clinic.loc[:,mask]
+clinic.loc[:, mask]
 
 # %%
 numeric_cols = (clinic.apply(pd.api.types.is_numeric_dtype))
@@ -563,8 +619,10 @@ to_drop = ["Study ID"]
 clinic[numeric_cols].drop(to_drop, axis=1)
 
 # %%
-files_out[config.fname_pkl_prodoc_clinic_num.stem] = config.fname_pkl_prodoc_clinic_num
-clinic[numeric_cols].drop(to_drop, axis=1).to_pickle(config.fname_pkl_prodoc_clinic_num)
+files_out[config.fname_pkl_prodoc_clinic_num.
+          stem] = config.fname_pkl_prodoc_clinic_num
+clinic[numeric_cols].drop(to_drop,
+                          axis=1).to_pickle(config.fname_pkl_prodoc_clinic_num)
 
 # %% [markdown]
 # ## Files saved by notebook

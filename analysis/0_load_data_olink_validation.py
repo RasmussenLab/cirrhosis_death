@@ -49,7 +49,8 @@ measure_olink
 # ## Load Olink validation data
 
 # %%
-inputs['olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
+inputs[
+    'olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
 olink = pd.read_table(inputs['olink'], sep='\t', low_memory=False)
 olink = olink.set_index(measure_olink.idx)
 olink
@@ -59,7 +60,8 @@ olink
 
 # %%
 duplicated = olink[measure_olink.measure].index.duplicated(keep=False)
-olink_bridge = olink.loc[duplicated].sort_index(level=-1).set_index('Project', append=True)
+olink_bridge = olink.loc[duplicated].sort_index(level=-1).set_index('Project',
+                                                                    append=True)
 olink_bridge.head(20)
 
 # %%
@@ -132,7 +134,8 @@ olink_cflow.describe()
 # Integrate update from Rasmus (last three non-matching IDs)
 
 # %%
-inputs['olink_update'] = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
+inputs[
+    'olink_update'] = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
 olink_update = pd.read_table(inputs['olink_update'], sep='\t', low_memory=False)
 olink_update = olink_update.set_index(measure_olink.idx)
 

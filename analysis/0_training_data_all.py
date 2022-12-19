@@ -23,8 +23,18 @@ import config
 import pandas as pd
 
 # %%
-files_in = {'clinic': {p.stem: p for p in [config.fname_pkl_prodoc_clinic_num, config.fname_pkl_cirkaflow_clinic_num]}}
-files_in['olink'] = {p.stem: p for p in [config.fname_pkl_prodoc_olink, config.fname_pkl_cirkaflow_olink]}
+files_in = {
+    'clinic': {
+        p.stem: p for p in [
+            config.fname_pkl_prodoc_clinic_num,
+            config.fname_pkl_cirkaflow_clinic_num
+        ]
+    }
+}
+files_in['olink'] = {
+    p.stem: p
+    for p in [config.fname_pkl_prodoc_olink, config.fname_pkl_cirkaflow_olink]
+}
 files_in
 
 # %%
@@ -45,8 +55,10 @@ olink = pd.concat(map(pd.read_pickle, olink))
 olink
 
 # %%
-files_out = {'olink': config.fname_pkl_all_olink, 
-            'clinic': config.fname_pkl_all_clinic_num}
+files_out = {
+    'olink': config.fname_pkl_all_olink,
+    'clinic': config.fname_pkl_all_clinic_num
+}
 files_out
 
 # %%

@@ -47,13 +47,13 @@ import njab
 # %% tags=["parameters"]
 TARGET = 'dead180infl'
 FOLDER = Path(config.folder_reports) / 'prodoc' / TARGET
-CLINIC=config.fname_pkl_prodoc_clinic
-OLINK=config.fname_pkl_prodoc_olink
-val_ids:str='' # List of comma separated values or filepath
+CLINIC = config.fname_pkl_prodoc_clinic
+OLINK = config.fname_pkl_prodoc_olink
+val_ids: str = ''  # List of comma separated values or filepath
 #
-clinic_cont=config.clinic_data.vars_cont # list or string of csv, eg. "var1,var2"
-clinic_binary=config.clinic_data.vars_binary # list or string of csv, eg. "var1,var2" 
-da_covar='Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol' # List of comma separated values or filepath
+clinic_cont = config.clinic_data.vars_cont  # list or string of csv, eg. "var1,var2"
+clinic_binary = config.clinic_data.vars_binary  # list or string of csv, eg. "var1,var2"
+da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol'  # List of comma separated values or filepath
 
 # %%
 # TARGET = 'dead180infl'
@@ -171,10 +171,13 @@ for var in vars_binary[1:] + vars_binary_created:
     if len(clinic[var].cat.categories) == 2:
         diff_binomial.append(
             njab.stats.groups_comparision.binomtest(clinic[var],
-                            happend,
-                            event_names=(TARGET, 'no-event')))
+                                                    happend,
+                                                    event_names=(TARGET,
+                                                                 'no-event')))
     else:
-        logging.warning(f"Non-binary variable: {var} with {len(clinic[var].cat.categories)} categories")
+        logging.warning(
+            f"Non-binary variable: {var} with {len(clinic[var].cat.categories)} categories"
+        )
 
 diff_binomial = pd.concat(diff_binomial).sort_values(
     ('binomial test', 'pvalue'))
@@ -189,14 +192,12 @@ with pd.option_context('display.max_rows', len(diff_binomial)):
 olink.loc[:, olink.isna().any()].describe()
 
 # %%
-ana_diff_olink = njab.stats.groups_comparision.diff_analysis(olink,
-                                         happend,
-                                         event_names=(TARGET,
-                                                      'no-event')).sort_values(
-                                                          ('ttest', 'p-val'))
+ana_diff_olink = njab.stats.groups_comparision.diff_analysis(
+    olink, happend, event_names=(TARGET, 'no-event')).sort_values(
+        ('ttest', 'p-val'))
 ana_diff_olink.to_excel(writer, "olink simple", float_format='%.4f')
 # with pd.option_context('display.max_rows', len(ana_diff_olink)):
-    # display(ana_diff_olink)
+# display(ana_diff_olink)
 ana_diff_olink.head(20)
 
 
@@ -220,7 +221,7 @@ for categorical_column in categorical_columns:
     # only works if no NA and only binary variables!
     clinic_ancova[categorical_column] = clinic_ancova[
         categorical_column].cat.codes
-    
+
 desc_ancova = clinic_ancova.describe()
 desc_ancova.to_excel(writer, "covars", float_format='%.4f')
 desc_ancova
@@ -235,16 +236,22 @@ if (desc_ancova.loc['std'] < 0.001).sum():
         covar.remove(col)
 
 # %%
-ancova = njab.stats.ancova.AncovaOnlyTarget(df_proteomics=olink.loc[clinic_ancova.index], df_clinic=clinic_ancova, target=TARGET, covar=covar)
+ancova = njab.stats.ancova.AncovaOnlyTarget(
+    df_proteomics=olink.loc[clinic_ancova.index],
+    df_clinic=clinic_ancova,
+    target=TARGET,
+    covar=covar)
 ancova = ancova.ancova().sort_values('p-unc')
 ancova = ancova.loc[:, "p-unc":]
 ancova.columns = pd.MultiIndex.from_product([['ancova'], ancova.columns],
-                                         names=('test', 'var'))
+                                            names=('test', 'var'))
 ancova.to_excel(writer, "olink controlled", float_format='%.4f')
 ancova.head(20)
 
 # %%
-ana_diff_olink = ana_diff_olink.join(ancova.reset_index(level=-1, drop=True)).sort_values(('ancova', 'p-unc'))
+ana_diff_olink = ana_diff_olink.join(ancova.reset_index(level=-1,
+                                                        drop=True)).sort_values(
+                                                            ('ancova', 'p-unc'))
 ana_diff_olink.to_excel(writer, "olink DA", float_format='%.4f')
 ana_diff_olink
 
@@ -311,7 +318,9 @@ for marker in rejected.index[1:]:  # first case done above currently
     model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
     model = model.fit(X=olink[marker].to_frame(), y=happend)
     cutoff = -float(model.intercept_) / float(model.coef_)
-    print(f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}")
+    print(
+        f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
+    )
     pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
     ax = compare_km_curves(pred=pred)
     ax.set_title(
@@ -371,9 +380,7 @@ fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
 
 # %%
-ax = seaborn.scatterplot(x=PCs.iloc[:, 0],
-                         y=PCs.iloc[:, 1],
-                         hue=clinic[TARGET])
+ax = seaborn.scatterplot(x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
 fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')
 

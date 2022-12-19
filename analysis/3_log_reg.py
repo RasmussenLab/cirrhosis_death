@@ -54,14 +54,14 @@ import config
 # - [ ] allow feature selection based on requested variables
 
 # %% tags=["parameters"]
-CLINIC:Path = config.fname_pkl_all_clinic_num # clinic numeric pickled, can contain missing
-OLINK:Path = config.fname_pkl_all_olink # olink numeric pickled, can contain missing
-TARGET:str = 'dead180infl' # target column in CLINIC data
-feat_set_to_consider:str='OLINK_AND_CLINIC'
-n_features_max:int = 15
+CLINIC: Path = config.fname_pkl_all_clinic_num  # clinic numeric pickled, can contain missing
+OLINK: Path = config.fname_pkl_all_olink  # olink numeric pickled, can contain missing
+TARGET: str = 'dead180infl'  # target column in CLINIC data
+feat_set_to_consider: str = 'OLINK_AND_CLINIC'
+n_features_max: int = 15
 VAL_IDS: str = ''  #
 VAL_IDS_query: str = 'Cflow'
-weights:bool = True
+weights: bool = True
 FOLDER = ''
 
 # %%
@@ -141,7 +141,9 @@ VAL_IDS
 
 # %%
 if feat_set_to_consider not in config.feat_sets:
-    raise ValueError(f"Choose one of the available sets: {', '.join(config.feat_sets.keys())}")
+    raise ValueError(
+        f"Choose one of the available sets: {', '.join(config.feat_sets.keys())}"
+    )
 feat_to_consider = config.feat_sets[feat_set_to_consider].split(',')
 feat_to_consider
 
@@ -165,7 +167,7 @@ if VAL_IDS:
     X = X.drop(VAL_IDS)
 
     use_val_split = True
-    
+
     y_val = y.loc[VAL_IDS]
     y = y.drop(VAL_IDS)
 
@@ -219,7 +221,7 @@ X_val = njab.sklearn.transform_DataFrame(X_val, median_imputer.transform)
 
 
 # %%
-assert X.isna().sum().sum()  == 0
+assert X.isna().sum().sum() == 0
 
 # %%
 X.shape, X_val.shape
@@ -247,7 +249,7 @@ files_out['scatter_first_5PCs.pdf'] = FOLDER / 'scatter_first_5PCs.pdf'
 fig, axes = plt.subplots(5, 2, figsize=(8.3, 11.7), layout='constrained')
 PCs = PCs.join(y.astype('category'))
 up_to = min(PCs.shape[-1], 5)
-for(i,j), ax in zip(itertools.combinations(range(up_to), 2), axes.flatten()):
+for (i, j), ax in zip(itertools.combinations(range(up_to), 2), axes.flatten()):
     PCs.plot.scatter(i, j, c=TARGET, cmap='Paired', ax=ax)
 _ = PCs.pop(TARGET)
 njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
@@ -262,7 +264,10 @@ embedding = reducer.fit_transform(X_scaled)
 # %%
 files_out['umap.pdf'] = FOLDER / 'umap.pdf'
 
-embedding = pd.DataFrame(embedding, index=X_scaled.index, columns=['UMAP 1', 'UMAP 2']).join(y.astype('category'))
+embedding = pd.DataFrame(embedding,
+                         index=X_scaled.index,
+                         columns=['UMAP 1',
+                                  'UMAP 2']).join(y.astype('category'))
 ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
 njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
 
@@ -278,11 +283,11 @@ njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
 
 # %%
 if weights:
-    weights= sklearn.utils.class_weight.compute_sample_weight('balanced', y)
-    cutoff=0.5
+    weights = sklearn.utils.class_weight.compute_sample_weight('balanced', y)
+    cutoff = 0.5
 else:
-    cutoff=None
-    weights=None
+    cutoff = None
+    weights = None
 
 # %% [markdown]
 # ## Logistic Regression
@@ -294,13 +299,14 @@ else:
 # # Scaled
 splits = Splits(X_train=X_scaled,
                 X_test=scaler.transform(X_val),
-                 y_train=y, y_test=y_val)
+                y_train=y,
+                y_test=y_val)
 
 # splits = Splits(X_train=X,
 #                 X_test=X_val,
 #                 y_train=y, y_test=y_val)
 
-model=sklearn.linear_model.LogisticRegression(penalty='none')
+model = sklearn.linear_model.LogisticRegression(penalty='none')
 
 # %%
 scoring = [
@@ -310,8 +316,8 @@ scoring = [
 scoring = {k: k for k in scoring}
 # do not average log loss for AIC and BIC calculations
 scoring['log_loss'] = make_scorer(log_loss,
-                                      greater_is_better=True,
-                                      normalize=False)
+                                  greater_is_better=True,
+                                  normalize=False)
 cv_feat = njab.sklearn.find_n_best_features(
     X=splits.X_train,
     y=splits.y_train,
@@ -331,21 +337,24 @@ cv_feat
 # %%
 # AIC vs BIC on train and test data with bigger is better
 IC_criteria = pd.DataFrame()
-N_split={'train': round(len(splits.X_train)*0.8), 'test': round(len(splits.X_train)*0.2)}
+N_split = {
+    'train': round(len(splits.X_train) * 0.8),
+    'test': round(len(splits.X_train) * 0.2)
+}
 
 # IC_criteria[('test_log_loss', 'mean')] = cv_feat[
 #                      ('test_log_loss', 'mean')]
 # IC_criteria[('train_log_loss', 'mean')] = cv_feat[
 #                      ('train_log_loss', 'mean')]
 for _split in ('train', 'test'):
-    
+
     IC_criteria[(f'{_split}_neg_AIC',
-                 'mean')] = - (2 * cv_feat.index.to_series() - 2 * cv_feat[
-                     (f'{_split}_log_loss', 'mean')])
+                 'mean')] = -(2 * cv_feat.index.to_series() -
+                              2 * cv_feat[(f'{_split}_log_loss', 'mean')])
     IC_criteria[(
         f'{_split}_neg_BIC',
-        'mean')] = -(cv_feat.index.to_series() * np.log(N_split[_split]) - 2 * cv_feat[
-            (f'{_split}_log_loss', 'mean')])
+        'mean')] = -(cv_feat.index.to_series() * np.log(N_split[_split]) -
+                     2 * cv_feat[(f'{_split}_log_loss', 'mean')])
 IC_criteria.columns = pd.MultiIndex.from_tuples(IC_criteria.columns)
 IC_criteria
 
@@ -361,7 +370,7 @@ cv_feat = cv_feat.data
 
 # %%
 mask = cv_feat.columns.levels[0].str[:4] == 'test'
-scores_cols =  cv_feat.columns.levels[0][mask]
+scores_cols = cv_feat.columns.levels[0][mask]
 n_feat_best = cv_feat.loc[:, pd.IndexSlice[scores_cols, 'mean']].idxmax()
 n_feat_best.name = 'best'
 n_feat_best.to_excel(writer, 'n_feat_best')
@@ -373,10 +382,9 @@ results_model = njab.sklearn.run_model(
     splits=splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
     # n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
-     n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
+    n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
-    fit_params=dict(sample_weight=weights)
-)
+    fit_params=dict(sample_weight=weights))
 
 results_model.name = model_name
 
@@ -385,7 +393,7 @@ results_model.name = model_name
 # ### ROC
 
 # %%
-ax = plot_auc(results_model, figsize=(4,2))
+ax = plot_auc(results_model, figsize=(4, 2))
 files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
@@ -393,7 +401,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 # ### PRC
 
 # %%
-ax = plot_prc(results_model, figsize=(4,2))
+ax = plot_prc(results_model, figsize=(4, 2))
 files_out['PRAUC'] = FOLDER / 'plot_prauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 
@@ -401,13 +409,18 @@ njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 # ### Coefficients with/out std. errors
 
 # %%
-pd.DataFrame({'coef': results_model.model.coef_.flatten(), 'name': results_model.model.feature_names_in_})
+pd.DataFrame({
+    'coef': results_model.model.coef_.flatten(),
+    'name': results_model.model.feature_names_in_
+})
 
 # %%
 results_model.model.intercept_
 
 # %%
-sm_logit = sm.Logit(endog=splits.y_train, exog=sm.add_constant(splits.X_train[results_model.selected_features]))
+sm_logit = sm.Logit(endog=splits.y_train,
+                    exog=sm.add_constant(
+                        splits.X_train[results_model.selected_features]))
 sm_logit = sm_logit.fit()
 sm_logit.summary()
 
@@ -420,9 +433,12 @@ des_selected_feat.to_excel(writer, 'sel_feat', float_format='%.3f')
 des_selected_feat
 
 # %%
-fig = plt.figure(figsize=(5,5,))
-files_out['corr_plot_train.pdf'] = FOLDER / 'corr_plot_train.pdf' 
-_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=80);
+fig = plt.figure(figsize=(
+    5,
+    5,
+))
+files_out['corr_plot_train.pdf'] = FOLDER / 'corr_plot_train.pdf'
+_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=80)
 fig.tight_layout()
 njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
@@ -432,16 +448,19 @@ njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %%
 N_BINS = 20
-score = get_score(clf=results_model.model, X=splits.X_train[results_model.selected_features], pos=1)
+score = get_score(clf=results_model.model,
+                  X=splits.X_train[results_model.selected_features],
+                  pos=1)
 ax = score.hist(bins=N_BINS)
 files_out['hist_score_train.pdf'] = FOLDER / 'hist_score_train.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train.pdf'])
 
 # %%
 # score_val
-pred_bins = get_target_count_per_bin(score, y, n_bins=N_BINS)    
+pred_bins = get_target_count_per_bin(score, y, n_bins=N_BINS)
 ax = pred_bins.plot(kind='bar', ylabel='count')
-files_out['hist_score_train_target.pdf'] = FOLDER / 'hist_score_train_target.pdf'
+files_out[
+    'hist_score_train_target.pdf'] = FOLDER / 'hist_score_train_target.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # pred_bins
 
@@ -449,14 +468,16 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # ### Test data scores
 
 # %%
-score_val = get_score(clf=results_model.model, X=splits.X_test[results_model.selected_features], pos=1)
+score_val = get_score(clf=results_model.model,
+                      X=splits.X_test[results_model.selected_features],
+                      pos=1)
 predictions['score'] = score_val
-ax = score_val.hist(bins=N_BINS) # list(x/N_BINS for x in range(0,N_BINS)))
+ax = score_val.hist(bins=N_BINS)  # list(x/N_BINS for x in range(0,N_BINS)))
 ax.set_ylabel('count')
-ax.set_xlim(0,1)
+ax.set_xlim(0, 1)
 files_out['hist_score_test.pdf'] = FOLDER / 'hist_score_test.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test.pdf'])
-pred_bins_val = get_target_count_per_bin(score_val, y_val, n_bins=N_BINS)    
+pred_bins_val = get_target_count_per_bin(score_val, y_val, n_bins=N_BINS)
 ax = pred_bins_val.plot(kind='bar', ylabel='count')
 ax.locator_params(axis='y', integer=True)
 files_out['hist_score_test_target.pdf'] = FOLDER / 'hist_score_test_target.pdf'
@@ -467,18 +488,20 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 # ## KM plot
 
 # %%
-y_km = clinic["dead"] if 'dead' in TARGET else clinic["LiverAdm180"] # ToDo: Make less error prone
+y_km = clinic["dead"] if 'dead' in TARGET else clinic[
+    "LiverAdm180"]  # ToDo: Make less error prone
 
-pred_train = get_pred(clf=results_model.model, X=splits.X_train[results_model.selected_features]).astype(bool)
-ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index, "DaysToDeathFromInfl"],
-                            y=y_km.loc[pred_train.index], 
-                          pred=pred_train,
-                            xlabel='Days since inflammation sample',
-                            ylabel=f'rate {y_km.name}')
+pred_train = get_pred(
+    clf=results_model.model,
+    X=splits.X_train[results_model.selected_features]).astype(bool)
+ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
+                                                    "DaysToDeathFromInfl"],
+                                    y=y_km.loc[pred_train.index],
+                                    pred=pred_train,
+                                    xlabel='Days since inflammation sample',
+                                    ylabel=f'rate {y_km.name}')
 
-ax.set_title(
-    f'KM curve for model (target={TARGET})'
-)
+ax.set_title(f'KM curve for model (target={TARGET})')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
@@ -491,11 +514,13 @@ njab.plotting.savefig(ax.get_figure(), fname)
 # ## Performance evaluations
 
 # %%
-prc = pd.DataFrame(results_model.train.prc, index='precision recall cutoffs'.split())
+prc = pd.DataFrame(results_model.train.prc,
+                   index='precision recall cutoffs'.split())
 prc
 
 # %%
-prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (1/prc.loc['precision'] + 1/prc.loc['recall'])
+prc.loc['f1_score'] = 2 * (prc.loc['precision'] * prc.loc['recall']) / (
+    1 / prc.loc['precision'] + 1 / prc.loc['recall'])
 f1_max = prc[prc.loc['f1_score'].argmax()]
 f1_max
 
@@ -553,29 +578,43 @@ def get_lr_multiplicative_decomposition(results, X, score, y):
     components['intercept'] = float(results.model.intercept_)
     components = np.exp(components)
     components['score'] = score
-    components[TARGET]  = y
+    components[TARGET] = y
     components = components.sort_values('score', ascending=False)
     return components
 
-components = get_lr_multiplicative_decomposition(results=results_model, X=splits.X_train, score=score, y=y)
+
+components = get_lr_multiplicative_decomposition(results=results_model,
+                                                 X=splits.X_train,
+                                                 score=score,
+                                                 y=y)
 components.to_excel(writer, 'decomp_multiplicative_train')
-components.to_excel(writer, 'decomp_multiplicative_train_view', float_format='%.5f')
+components.to_excel(writer,
+                    'decomp_multiplicative_train_view',
+                    float_format='%.5f')
 components.head(10)
 
 # %%
-components_test = get_lr_multiplicative_decomposition(results=results_model, X=splits.X_test, score=score_val, y=y_val)
+components_test = get_lr_multiplicative_decomposition(results=results_model,
+                                                      X=splits.X_test,
+                                                      score=score_val,
+                                                      y=y_val)
 components_test.to_excel(writer, 'decomp_multiplicative_test')
-components_test.to_excel(writer, 'decomp_multiplicative_test_view', float_format='%.5f')
+components_test.to_excel(writer,
+                         'decomp_multiplicative_test_view',
+                         float_format='%.5f')
 components_test.head(10)
 
 # %%
 pivot = y.to_frame()
-pivot['pred'] = results_model.model.predict(splits.X_train[results_model.selected_features])
+pivot['pred'] = results_model.model.predict(
+    splits.X_train[results_model.selected_features])
 pivot = pivot.join(clinic.dead.astype(int))
 pivot.describe().iloc[:2]
 
 # %%
-pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET]).agg({'dead': ['count', 'sum']}) # more detailed
+pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET
+                                              ]).agg({'dead': ['count', 'sum']
+                                                     })  # more detailed
 pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 
@@ -586,20 +625,27 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 reducer = umap.UMAP()
 embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
 
-embedding = pd.DataFrame(embedding, index=X_scaled.index, columns=['UMAP 1', 'UMAP 2']).join(y.astype('category'))
+embedding = pd.DataFrame(embedding,
+                         index=X_scaled.index,
+                         columns=['UMAP 1',
+                                  'UMAP 2']).join(y.astype('category'))
 ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
 
 # %%
 predictions['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
-predictions['label'] = predictions.apply(lambda x: njab.sklearn.scoring.get_label_binary_classification(
+predictions['label'] = predictions.apply(
+    lambda x: njab.sklearn.scoring.get_label_binary_classification(
         x['true'], x[model_name]),
-                      axis=1)
+    axis=1)
 mask = predictions[['true', model_name]].sum(axis=1).astype(bool)
 predictions.loc[mask].sort_values('score', ascending=False)
 
 # %%
 X_val_scaled = scaler.transform(X_val)
-embedding_val = pd.DataFrame(reducer.transform(X_val_scaled[results_model.selected_features]), index=X_val_scaled.index, columns=['UMAP 1', 'UMAP 2'])
+embedding_val = pd.DataFrame(reducer.transform(
+    X_val_scaled[results_model.selected_features]),
+                             index=X_val_scaled.index,
+                             columns=['UMAP 1', 'UMAP 2'])
 embedding_val.sample(3)
 
 # %%
@@ -624,17 +670,17 @@ colors = seaborn.color_palette(n_colors=4)
 colors
 
 # %%
-fig, axes = plt.subplots(1,2, figsize=(8,4), sharex=True, sharey=True)
-for _pcs, ax, _title, _model_pred_label in zip([embedding, embedding_val],
-                                                axes,
-                                                ['train', 'test'],
-                                                [pred_train['label'], predictions['label']]
-    ):
-    ax = seaborn.scatterplot(x=_pcs.iloc[:,0], y=_pcs.iloc[:, 1],
-                             hue=_model_pred_label,
-                             hue_order=['TN', 'TP', 'FN', 'FP'],
-                             palette=[colors[0], colors[2], colors[1], colors[3]],
-                             ax=ax)
+fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+for _pcs, ax, _title, _model_pred_label in zip(
+    [embedding, embedding_val], axes, ['train', 'test'],
+    [pred_train['label'], predictions['label']]):
+    ax = seaborn.scatterplot(
+        x=_pcs.iloc[:, 0],
+        y=_pcs.iloc[:, 1],
+        hue=_model_pred_label,
+        hue_order=['TN', 'TP', 'FN', 'FP'],
+        palette=[colors[0], colors[2], colors[1], colors[3]],
+        ax=ax)
     ax.set_title(_title)
 
 # files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
@@ -647,8 +693,10 @@ njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 # ## Annotation of Errors for manuel analysis
 
 # %%
-_ = X[results_model.selected_features].join(pred_train).to_excel(writer, sheet_name='pred_train_annotated', float_format="%.3f")
-_ = X_val[results_model.selected_features].join(predictions).to_excel(writer, sheet_name='pred_test_annotated', float_format="%.3f")
+_ = X[results_model.selected_features].join(pred_train).to_excel(
+    writer, sheet_name='pred_train_annotated', float_format="%.3f")
+_ = X_val[results_model.selected_features].join(predictions).to_excel(
+    writer, sheet_name='pred_test_annotated', float_format="%.3f")
 
 # %% [markdown]
 # ## Outputs

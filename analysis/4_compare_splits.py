@@ -35,8 +35,8 @@ fname_pkl_olink = config.fname_pkl_all_olink
 
 TARGET = 'hasLiverAdm180'
 FOLDER = ''
-feat_set_to_consider:str='OLINK_AND_CLINIC'
-VAL_IDS=''
+feat_set_to_consider: str = 'OLINK_AND_CLINIC'
+VAL_IDS = ''
 VAL_IDS_query = "Cflow"
 name_report = 'train_val_comparison'
 

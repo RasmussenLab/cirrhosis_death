@@ -42,7 +42,9 @@ IQR_FACTOR = 1.5
 EXCLUDED = 'DaysToDeath,DaysToAdmFromDiagnose,DaysToAdmFromSample,DaysToDeathFromDiagnose'
 
 # %%
-vars_cont_sel = [x for x in config.clinic_data.vars_cont if x not in EXCLUDED.split(',')]
+vars_cont_sel = [
+    x for x in config.clinic_data.vars_cont if x not in EXCLUDED.split(',')
+]
 cont_des = clinic[vars_cont_sel].describe()
 cont_des
 
@@ -53,7 +55,8 @@ cont_des
 # %%
 ax = clinic[vars_cont_sel].boxplot(rot=90, whis=IQR_FACTOR)
 fig = ax.get_figure()
-fig.savefig(f"{config.folder_reports}/outlier_boxplot_iqr_factor_{IQR_FACTOR}.pdf")
+fig.savefig(
+    f"{config.folder_reports}/outlier_boxplot_iqr_factor_{IQR_FACTOR}.pdf")
 
 # %%
 cont_des.loc['iqr'] = cont_des.loc['75%'] - cont_des.loc['25%']
@@ -65,13 +68,16 @@ cont_des
 cont_des.to_excel(f"{config.folder_reports}/clinic_cont_described.xlsx")
 
 # %%
-mask = (clinic[vars_cont_sel] < cont_des.loc['val_min']) | (clinic[vars_cont_sel] > cont_des.loc['val_max'])
+mask = (clinic[vars_cont_sel] < cont_des.loc['val_min']) | (
+    clinic[vars_cont_sel] > cont_des.loc['val_max'])
 msg = "Total number of outlier values: {}"
 print(msg.format(mask.sum().sum()))
 
 # %%
-outliers = clinic[vars_cont_sel][mask].dropna(axis=0, how='all').dropna(axis=1, how='all')
-outliers = outliers.style.format( na_rep='-', precision=2)
+outliers = clinic[vars_cont_sel][mask].dropna(axis=0,
+                                              how='all').dropna(axis=1,
+                                                                how='all')
+outliers = outliers.style.format(na_rep='-', precision=2)
 with pd.option_context('display.max_rows', len(outliers.data)):
     display(outliers)
 
