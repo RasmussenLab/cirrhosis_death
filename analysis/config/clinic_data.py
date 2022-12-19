@@ -110,7 +110,15 @@ comorbidities = [
     'HighCholesterol',
 ]
 
+clinical_feat = [
+    'Sex', 'EtiAlco', 'Ascites', 'EsoBleeding', 'Potassium',
+    'InsulinDependent', 'NonselectBetaBlock', 'HeartDiseaseTotal',
+    *comorbidities,
+    *vars_cont
+]
+
 covars = ["Sex", "Age", "MELD-score", *comorbidities]
+
 
 scores = ['MELD-score', 'MELD-Na', 'ChildPugh',]
 

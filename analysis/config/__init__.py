@@ -44,7 +44,7 @@ COMPARE_PRODOC = 'is_valdiation_sample'
 
 feat_sets = {
     'OLINK': ','.join(olink.inflammation_panel),
-    'CLINIC': ','.join(clinic_data.comorbidities + clinic_data.vars_cont)
+    'CLINIC': ','.join(clinic_data.clinical_feat)
 }
 feat_sets['OLINK_AND_CLINIC'] = ','.join(feat_sets.values())
 feat_sets['OLINK_AND_SCORES'] =  ','.join(olink.inflammation_panel + clinic_data.scores)
