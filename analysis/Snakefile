@@ -29,7 +29,9 @@ rule all:
             out_path=folder_reports,
             target=TARGETS,
             feat_sets=project_config.feat_sets),
-        f"{folder_reports}/data_prodoc/train_val"f"/1_explorative_analysis.ipynb"
+        f'{folder_reports}/data_prodoc/train_val/1_explorative_analysis.ipynb',
+        f"{folder_reports}/hist_meld_score_cohorts.pdf",
+        f"{folder_reports}/1_explorative_figures.ipynb"
 
 
 
@@ -137,6 +139,20 @@ rule profile_data:
         "pandas_profiling {input.clinic} {output.profiling_report_clinic} -m"
         " && pandas_profiling {input.olink} {output.profiling_report_olink} -m"
 
+nb='1_explorative_figures.ipynb'
+rule explorative_figures:
+    input:
+        project_config.fname_pkl_all_olink,
+        project_config.fname_pkl_all_clinic_num,
+        nb=nb
+    output:
+        nb="{out_path}/"f"{nb}",
+        hist_meld_score_cohorts="{out_path}/hist_meld_score_cohorts.pdf",
+        hist_meld_score_cohorts_normalized="{out_path}/hist_meld_score_cohorts_normalized.pdf"
+    shell:
+        "papermill {input.nb} {output.nb}"
+        " --inject-paths"
+        " && jupyter nbconvert {output.nb} --to html"
 
 nb='1_explorative_analysis.ipynb'
 rule differential_analysis:
