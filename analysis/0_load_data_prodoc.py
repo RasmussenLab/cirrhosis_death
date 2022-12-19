@@ -299,10 +299,12 @@ view
 kmf = KaplanMeierFitter()
 kmf.fit(clinic["DaysToDeathFromInfl"], event_observed=clinic["dead"])
 
+X_LIMIT = config.MAX_DAYS_INTERVAL
+
 fig, ax = plt.subplots()
 y_lim = (0, 1)
 ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
-    xlim=(0, None),
+    xlim=(0, X_LIMIT),
     ylim=y_lim,
     xlabel='Days since inflammation sample',
     ylabel='survival rate',
@@ -352,7 +354,7 @@ kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask,
 fig, ax = plt.subplots()
 y_lim = (0, 1)
 ax = kmf.plot(#title='Kaplan Meier curve for liver related admissions',
-              xlim=(0, None),
+              xlim=(0, X_LIMIT),
               ylim=(0, 1),
               xlabel='Days since inflammation sample',
               ylabel='rate no liver related admission',

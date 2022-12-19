@@ -3,6 +3,7 @@ import config.pandas
 from pathlib import Path
 
 STUDY_ENDDATE: str = '2022-09-09'
+MAX_DAYS_INTERVAL: int = 730
 
 base_folder = Path('S:/SUND-CBMR-RegH-cohorts/ProDoc')
 data = Path(base_folder)
