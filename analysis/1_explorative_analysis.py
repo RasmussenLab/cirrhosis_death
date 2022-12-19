@@ -28,6 +28,8 @@ import pingouin as pg
 import seaborn
 import sklearn
 from sklearn.metrics import precision_recall_curve, roc_curve
+from lifelines import KaplanMeierFitter
+
 
 import src
 import njab.plotting
@@ -91,6 +93,14 @@ vars_binary = check_isin_clinic(config.clinic_data.vars_binary)
 vars_binary
 
 # %% [markdown]
+# ### Collect outputs
+
+# %%
+fname = FOLDER / '1_differential_analysis.xlsx'
+files_out = {fname.name: fname}
+writer = pd.ExcelWriter(fname)
+
+# %% [markdown]
 # # Differences between groups defined by target
 
 # %%
@@ -132,7 +142,6 @@ ana_differential = njab.stats.groups_comparision.diff_analysis(
 )
 ana_differential = ana_differential.sort_values(('ttest', 'p-val'))
 
-writer = pd.ExcelWriter(FOLDER / '1_differential_analysis.xlsx')
 ana_differential.to_excel(writer, "clinic continous", float_format='%.4f')
 
 ana_differential
@@ -239,6 +248,62 @@ ana_diff_olink
 
 # %%
 writer.close()
+
+# %% [markdown]
+# ## KM plot for top marker
+
+# %%
+marker = ana_diff_olink.iloc[0].name
+marker
+
+# %%
+class_weight='balanced'
+# class_weight=None
+model=sklearn.linear_model.LogisticRegression(class_weight=class_weight)
+model=model.fit(X=olink[marker].to_frame(), y=happend)
+
+# %% [markdown] tags=[]
+# For the univariate logistic regression
+# $$ ln \frac{p}{1-p} = \beta_0 + \beta_1 \cdot x $$
+# the cutoff `c=0.5` corresponds a feature value of: 
+# $$ x = - \frac{\beta_0}{\beta_1} $$
+
+# %%
+cutoff =  - float(model.intercept_) / float(model.coef_)
+print(f"Custom cutoff defined by Logistic regressor: {cutoff:.3f} ")
+
+# %%
+pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
+pred.sum()
+
+# %%
+kmf = KaplanMeierFitter()
+ylim = (0, 1)
+xlim = (0, 700)
+
+mask = ~pred
+kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "dead"])
+kmf.plot(xlim=xlim,
+         ylim=ylim,
+         legend=False)
+
+mask = pred
+kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "dead"])
+ax = kmf.plot(title=f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})',
+              xlim=xlim,
+              ylim=ylim,
+              xlabel='Days since inflammation sample',
+              ylabel='rate no liver related admission',
+              legend=False)
+_ = ax.vlines(90, *ylim)
+_ = ax.vlines(180, *ylim)
+
+ax.legend([f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)', f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'])
+fig = ax.get_figure()
+
+fname = FOLDER / 'KM_plot.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(fig, fname)
 
 # %% [markdown]
 # # PCA
