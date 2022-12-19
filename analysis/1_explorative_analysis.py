@@ -279,11 +279,13 @@ pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
 pred.sum()
 
 # %%
+y_km = clinic["dead"] if 'dead' in TARGET else clinic[
+    "LiverAdm180"]  # ToDo: Make less error prone
 compare_km_curves = partial(compare_km_curves,
                             time=clinic["DaysToDeathFromInfl"],
-                            y=clinic["dead"],
+                            y=y_km,
                             xlabel='Days since inflammation sample',
-                            ylabel=f'rate {TARGET}')
+                            ylabel=f'rate {y_km.name}')
 
 ax = compare_km_curves(pred=pred)
 ax.set_title(
