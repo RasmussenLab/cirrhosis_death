@@ -42,6 +42,12 @@ TARGETS = [
 
 COMPARE_PRODOC = 'is_valdiation_sample'
 
+Y_KM = {
+    'dead180infl': 'dead',
+    'hasLiverAdm180': 'hasLiverAdm180',
+    'is_valdiation_sample': 'is_valdiation_sample'
+}
+
 
 feat_sets = {
     'OLINK': ','.join(olink.inflammation_panel),

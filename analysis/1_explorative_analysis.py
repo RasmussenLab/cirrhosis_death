@@ -63,7 +63,7 @@ da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyp
 # OLINK = config.fname_pkl_cirkaflow_olink
 
 # %%
-# da_covar='Sex,Age,Diabetes,Hypertension,HighCholesterol,MELD-score'
+Y_KM = config.Y_KM[TARGET]
 
 # %%
 if not FOLDER:
@@ -286,8 +286,7 @@ pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
 pred.sum()
 
 # %%
-y_km = clinic["dead"] if 'dead' in TARGET else clinic[
-    "LiverAdm180"]  # ToDo: Make less error prone
+y_km = clinic[Y_KM]
 compare_km_curves = partial(compare_km_curves,
                             time=clinic["DaysToDeathFromInfl"],
                             y=y_km,
