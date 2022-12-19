@@ -25,13 +25,15 @@ import numpy as np
 import pandas as pd
 
 import pingouin as pg
-import seaborn
 import sklearn
 from sklearn.metrics import precision_recall_curve, roc_curve
 from lifelines import KaplanMeierFitter
 
+import matplotlib.pyplot as plt
+import seaborn
 
 import src
+from src.plotting.km import compare_km_curves
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
 from njab.sklearn.scoring import ConfusionMatrix
@@ -257,10 +259,10 @@ marker = ana_diff_olink.iloc[0].name
 marker
 
 # %%
-class_weight='balanced'
+class_weight = 'balanced'
 # class_weight=None
-model=sklearn.linear_model.LogisticRegression(class_weight=class_weight)
-model=model.fit(X=olink[marker].to_frame(), y=happend)
+model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
+model = model.fit(X=olink[marker].to_frame(), y=happend)
 
 # %% [markdown] tags=[]
 # For the univariate logistic regression
@@ -269,41 +271,57 @@ model=model.fit(X=olink[marker].to_frame(), y=happend)
 # $$ x = - \frac{\beta_0}{\beta_1} $$
 
 # %%
-cutoff =  - float(model.intercept_) / float(model.coef_)
-print(f"Custom cutoff defined by Logistic regressor: {cutoff:.3f} ")
+cutoff = -float(model.intercept_) / float(model.coef_)
+print(f"Custom cutoff defined by Logistic regressor: {cutoff:.3f}")
 
 # %%
 pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
 pred.sum()
 
 # %%
-kmf = KaplanMeierFitter()
-ylim = (0, 1)
-xlim = (0, 700)
+compare_km_curves = partial(compare_km_curves,
+                            time=clinic["DaysToDeathFromInfl"],
+                            y=clinic["dead"],
+                            xlabel='Days since inflammation sample',
+                            ylabel=f'rate {TARGET}')
 
-mask = ~pred
-kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "dead"])
-kmf.plot(xlim=xlim,
-         ylim=ylim,
-         legend=False)
-
-mask = pred
-kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"], event_observed=clinic.loc[mask, "dead"])
-ax = kmf.plot(title=f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})',
-              xlim=xlim,
-              ylim=ylim,
-              xlabel='Days since inflammation sample',
-              ylabel='rate no liver related admission',
-              legend=False)
-_ = ax.vlines(90, *ylim)
-_ = ax.vlines(180, *ylim)
-
-ax.legend([f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)', f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'])
-fig = ax.get_figure()
-
-fname = FOLDER / 'KM_plot.pdf'
+ax = compare_km_curves(pred=pred)
+ax.set_title(
+    f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})'
+)
+ax.legend([
+    f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
+    f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'
+])
+fname = FOLDER / f'KM_plot_{marker}.pdf'
 files_out[fname.name] = fname
-njab.plotting.savefig(fig, fname)
+njab.plotting.savefig(ax.get_figure(), fname)
+
+# %%
+rejected = ana_diff_olink.query("`('ancova', 'rejected')` == True")
+rejected
+
+# %%
+for marker in rejected.index[1:]:  # first case done above currently
+    fig, ax = plt.subplots()
+    class_weight = 'balanced'
+    # class_weight=None
+    model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
+    model = model.fit(X=olink[marker].to_frame(), y=happend)
+    cutoff = -float(model.intercept_) / float(model.coef_)
+    print(f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}")
+    pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
+    ax = compare_km_curves(pred=pred)
+    ax.set_title(
+        f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})'
+    )
+    ax.legend([
+        f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
+        f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'
+    ])
+    fname = FOLDER / f'KM_plot_{marker}.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
 
 # %% [markdown]
 # # PCA
