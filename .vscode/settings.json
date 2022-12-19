@@ -1,4 +1,12 @@
 {
     "python.formatting.provider": "yapf",
-    "terminal.integrated.cwd": "analysis"
+    "terminal.integrated.cwd": "analysis",
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#75945a"
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.ipynb_checkpoints": true
+    },
+    // "editor.formatOnSave": true
 }
