@@ -294,8 +294,14 @@ compare_km_curves = partial(compare_km_curves,
                             ylabel=f'rate {y_km.name}')
 
 ax = compare_km_curves(pred=pred)
+print(f"Intercept {-float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+cutoff = -float(model.intercept_) / float(model.coef_)
+direction = '>' if model.coef_ > 0 else '<'
+print(
+    f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
+)
 ax.set_title(
-    f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})'
+    f'KM curve for {TARGET} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
 )
 ax.legend([
     f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
@@ -309,6 +315,9 @@ njab.plotting.savefig(ax.get_figure(), fname)
 rejected = ana_diff_olink.query("`('ancova', 'rejected')` == True")
 rejected
 
+# %% [markdown]
+# Direction of cutoff cannot be directly inferred from cutoff
+
 # %%
 for marker in rejected.index[1:]:  # first case done above currently
     fig, ax = plt.subplots()
@@ -316,14 +325,16 @@ for marker in rejected.index[1:]:  # first case done above currently
     # class_weight=None
     model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
     model = model.fit(X=olink[marker].to_frame(), y=happend)
+    print(f"Intercept {-float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
     cutoff = -float(model.intercept_) / float(model.coef_)
+    direction = '>' if model.coef_ > 0 else '<'
     print(
         f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
     )
     pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
     ax = compare_km_curves(pred=pred)
     ax.set_title(
-        f'KM curve for {TARGET} and Olink marker {marker} (class_weight: {class_weight})'
+        f'KM curve for {TARGET} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
     )
     ax.legend([
         f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
