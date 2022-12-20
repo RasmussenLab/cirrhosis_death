@@ -499,7 +499,7 @@ ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
                                     xlabel='Days since inflammation sample',
                                     ylabel=f'rate {y_km.name}')
 
-ax.set_title(f'KM curve for model (target={TARGET}, feat_set={feat_set_to_consider})')
+ax.set_title(f'KM curve for LR based on {feat_set_to_consider}')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
