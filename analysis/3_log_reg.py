@@ -283,7 +283,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
 
 # %%
 if weights:
-    weights = sklearn.utils.class_weight.compute_sample_weight('balanced', y)
+    weights = 'balanced'
     cutoff = 0.5
 else:
     cutoff = None
@@ -306,7 +306,7 @@ splits = Splits(X_train=X_scaled,
 #                 X_test=X_val,
 #                 y_train=y, y_test=y_val)
 
-model = sklearn.linear_model.LogisticRegression(penalty='none')
+model = sklearn.linear_model.LogisticRegression(penalty='l2', class_weight=weights)
 
 # %%
 scoring = [
@@ -327,7 +327,8 @@ cv_feat = njab.sklearn.find_n_best_features(
     n_features_max=n_features_max,
     scoring=scoring,
     return_train_score=True,
-    fit_params=dict(sample_weight=weights))
+    # fit_params=dict(sample_weight=weights)
+)
 cv_feat = cv_feat.groupby('n_features').agg(['mean', 'std'])
 cv_feat
 
@@ -384,7 +385,8 @@ results_model = njab.sklearn.run_model(
     n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
     # n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
-    fit_params=dict(sample_weight=weights))
+    #fit_params=dict(sample_weight=weights)
+)
 
 results_model.name = model_name
 
