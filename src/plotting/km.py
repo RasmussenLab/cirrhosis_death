@@ -9,7 +9,7 @@ def compare_km_curves(
     pred: pd.Series,
     ax: Axes = None,
     ylim: tuple[int] = (0, 1),
-    xlim: tuple[int] = (0, 730),
+    xlim: tuple[int] = (0, 180),
     xlabel: str = None,
     ylabel: str = None,
 ) -> Axes:
@@ -54,6 +54,4 @@ def compare_km_curves(
                   xlabel=xlabel,
                   ylabel=ylabel,
                   legend=False)
-    _ = ax.vlines(90, *ylim)
-    _ = ax.vlines(180, *ylim)
     return ax
