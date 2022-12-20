@@ -381,8 +381,8 @@ results_model = njab.sklearn.run_model(
     model=model,
     splits=splits,
     # n_feat_to_select=n_feat_best.loc['test_f1', 'mean'],
-    # n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
-    n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
+    n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
+    # n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
     fit_params=dict(sample_weight=weights))
 
@@ -433,13 +433,9 @@ des_selected_feat.to_excel(writer, 'sel_feat', float_format='%.3f')
 des_selected_feat
 
 # %%
-fig = plt.figure(figsize=(
-    5,
-    5,
-))
+fig = plt.figure(figsize=(6, 6))
 files_out['corr_plot_train.pdf'] = FOLDER / 'corr_plot_train.pdf'
-_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=80)
-fig.tight_layout()
+_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=300)
 njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %% [markdown]
@@ -501,7 +497,7 @@ ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
                                     xlabel='Days since inflammation sample',
                                     ylabel=f'rate {y_km.name}')
 
-ax.set_title(f'KM curve for model (target={TARGET})')
+ax.set_title(f'KM curve for model (target={TARGET}, feat_set={feat_set_to_consider})')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
