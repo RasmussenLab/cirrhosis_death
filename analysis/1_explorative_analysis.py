@@ -294,7 +294,7 @@ compare_km_curves = partial(compare_km_curves,
                             ylabel=f'rate {y_km.name}')
 
 ax = compare_km_curves(pred=pred)
-print(f"Intercept {-float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
 cutoff = -float(model.intercept_) / float(model.coef_)
 direction = '>' if model.coef_ > 0 else '<'
 print(
@@ -325,7 +325,7 @@ for marker in rejected.index[1:]:  # first case done above currently
     # class_weight=None
     model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
     model = model.fit(X=olink[marker].to_frame(), y=happend)
-    print(f"Intercept {-float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+    print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
     cutoff = -float(model.intercept_) / float(model.coef_)
     direction = '>' if model.coef_ > 0 else '<'
     print(
