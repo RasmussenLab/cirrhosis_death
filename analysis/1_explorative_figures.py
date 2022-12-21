@@ -56,7 +56,7 @@ ax = clinic_cflow[col].rename('CirkaFlow').hist(alpha=0.7,
                                                 legend=True,
                                                 bins=bins)
 _ = ax.set_xlabel(col)
-_ = ax.set_ylabel('n observations in bin')
+_ = ax.set_ylabel('n observations')
 _ = ax.set_xticks(list(bins))
 
 fname = FOLDER / 'hist_meld_score_cohorts.pdf'
@@ -73,7 +73,7 @@ ax = clinic_cflow[col].rename('CirkaFlow').hist(alpha=0.7,
                                                 density=1,
                                                 bins=bins)
 _ = ax.set_xlabel(col)
-_ = ax.set_ylabel('n observations in bin')
+_ = ax.set_ylabel('proportion')
 _ = ax.set_xticks(list(bins))
 
 fname = FOLDER / 'hist_meld_score_cohorts_normalized.pdf'
