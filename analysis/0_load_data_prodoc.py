@@ -379,6 +379,8 @@ savefig(fig, files_out['deaths_along_time'])
 
 # %% [markdown]
 # ## Kaplan-Meier plot admissions
+#
+# - information was only collected up to 180 days after inflammation sample
 
 # %%
 to_exclude = clinic[
@@ -396,20 +398,20 @@ kmf = KaplanMeierFitter()
 
 mask = ~to_exclude
 print(f"Based on {mask.sum()} patients")
-kmf.fit(clinic.loc[mask, "DaysToDeathFromInfl"],
+kmf.fit(clinic.loc[mask, "DaysToAdmFromInflSample"],
         event_observed=clinic.loc[mask, "LiverAdm180"].fillna(0))
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
 ax = kmf.plot(  #title='Kaplan Meier curve for liver related admissions',
-    xlim=(0, X_LIMIT),
+    xlim=(0, 180),
     ylim=(0, 1),
     xlabel='Days since inflammation sample',
-    ylabel='rate no liver related admission',
+    ylabel='rate no liver-related admission',
     legend=False)
 ax.legend([f"KP admission (N={mask.sum()})", '95% CI'])
-_ = ax.vlines(90, *y_lim)
-_ = ax.vlines(180, *y_lim)
+# _ = ax.vlines(90, *y_lim)
+# _ = ax.vlines(180, *y_lim)
 fig = ax.get_figure()
 
 files_out['km_plot_admission'] = FOLDER_REPORTS / 'km_plot_admission.pdf'

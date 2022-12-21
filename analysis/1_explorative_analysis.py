@@ -57,13 +57,14 @@ da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyp
 
 # %%
 # TARGET = 'dead180infl'
-# # TARGET = 'hasLiverAdm180'
+TARGET = 'hasLiverAdm180'
 # FOLDER = Path(config.folder_reports) / 'cirkaflow' / TARGET
 # CLINIC = config.fname_pkl_cirkaflow_clinic
 # OLINK = config.fname_pkl_cirkaflow_olink
 
 # %%
-Y_KM = config.Y_KM[TARGET]
+TIME_KM, Y_KM = config.Y_KM[TARGET]
+print(f"Time To Event: {TIME_KM} and rate variables for {TARGET}: {Y_KM}")
 
 # %%
 if not FOLDER:
@@ -287,8 +288,11 @@ pred.sum()
 
 # %%
 y_km = clinic[Y_KM]
+
+time_km = clinic[TIME_KM]
+
 compare_km_curves = partial(compare_km_curves,
-                            time=clinic["DaysToDeathFromInfl"],
+                            time=time_km,
                             y=y_km,
                             xlabel='Days since inflammation sample',
                             ylabel=f'rate {y_km.name}')

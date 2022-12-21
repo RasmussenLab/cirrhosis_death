@@ -43,9 +43,9 @@ TARGETS = [
 COMPARE_PRODOC = 'is_valdiation_sample'
 
 Y_KM = {
-    'dead180infl': 'dead',
-    'hasLiverAdm180': 'hasLiverAdm180',
-    'is_valdiation_sample': 'is_valdiation_sample'
+    'dead180infl': ('DaysToDeathFromInfl', 'dead'),
+    'hasLiverAdm180': ('DaysToAdmFromInflSample', 'hasLiverAdm180'),
+    'is_valdiation_sample': ('DaysToDeathFromInfl', 'is_valdiation_sample')
 }
 
 
