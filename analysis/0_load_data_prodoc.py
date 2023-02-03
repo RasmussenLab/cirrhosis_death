@@ -57,10 +57,13 @@ files_out = dict()
 
 config.STUDY_ENDDATE
 
+# %% [markdown]
+# ## Parameters
+
 # %% tags=["parameters"]
-DATA_CLINIC = DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx'
-DATA_OLINK = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
-DATA_OLINK_VAL = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
+DATA_CLINIC:str = DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx'
+DATA_OLINK:str = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
+DATA_OLINK_VAL:str = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
 
 # %% [markdown]
 # Load clinical data
@@ -74,6 +77,7 @@ clinic = clinic.set_index('SampleID').sort_index()
 # %%
 # clinic
 clinic.describe(datetime_is_numeric=True, include='all')
+clinic.columns = clinic.columns.str.strip() # strip whitespace in column names
 
 # %%
 olink = pd.read_table(DATA_OLINK)
@@ -383,10 +387,6 @@ savefig(fig, files_out['deaths_along_time'])
 # - information was only collected up to 180 days after inflammation sample
 
 # %%
-to_exclude = clinic[
-    "ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
-
-# %%
 clinic["LiverAdm180"].value_counts(dropna=False).sort_index()
 
 # %%
@@ -442,8 +442,6 @@ targets = pd.DataFrame(targets)
 targets.describe()
 
 # %%
-# to_exclude = clinic["LiverAdm90"].isna() & targets["dead090infl"] == True
-# to_exclude.sum()
 to_exclude = clinic[
     "ExcludeFromAdm (due to mors/terminal just after inclusion)"].notna()
 to_exclude.sum()

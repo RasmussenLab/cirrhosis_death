@@ -29,7 +29,7 @@ fname_pkl_all_olink = data_processed / 'all_olink.pkl'
 
 from . import clinic_data
 from . import olink
-from . import circaflow_data
+from . import cirkaflow_data
 
 TARGETS = [
     # 'dead090infl',

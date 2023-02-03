@@ -43,12 +43,15 @@ files_out = dict()
 
 config.STUDY_ENDDATE
 
-# %%
-DATA_CLINIC = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx'
-DATA_OLINK = DATA_PROCESSED / 'olink_cflow.pkl'
-DATA_KEYS = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv"
-DATA_KEYS_UPDATE = DATA_FOLDER / "Validation Results" / 'cflow_id_update.xlsx'
-DATA_DUPLICATES = DATA_FOLDER / "Validation Results" / 'duplicates.xlsx'
+# %% [markdown]
+# ## Parameters
+
+# %% tags=["parameters"]
+DATA_CLINIC: str = DATA_FOLDER / 'CleanData, CirKaFlow.true.xlsx'
+DATA_OLINK: str = DATA_PROCESSED / 'olink_cflow.pkl'
+DATA_KEYS: str = DATA_FOLDER / "Validation Results" / "boks_placement_randomized.csv"
+DATA_KEYS_UPDATE: str = DATA_FOLDER / "Validation Results" / 'cflow_id_update.xlsx'
+DATA_DUPLICATES: str = DATA_FOLDER / "Validation Results" / 'duplicates.xlsx'
 
 
 # %%
@@ -56,10 +59,10 @@ clinic = pd.read_excel(DATA_CLINIC).dropna(how='all', axis=1)
 olink = pd.read_pickle(DATA_OLINK)
 
 # %%
-clinic = clinic.rename(config.circaflow_data.rename_dict, axis=1)
+clinic = clinic.rename(config.cirkaflow_data.rename_dict, axis=1)
 # clinic = clinic.set_index('ID')
 print('Rename:',
-      {k: v for k, v in config.circaflow_data.rename_dict.items() if k != v})
+      {k: v for k, v in config.cirkaflow_data.rename_dict.items() if k != v})
 
 # %% [markdown]
 # Find overlapping samples between keys, olink and clinic

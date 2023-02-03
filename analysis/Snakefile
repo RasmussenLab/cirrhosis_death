@@ -18,8 +18,8 @@ rule all:
              "{out_path}/prodoc/{target}/train_val_comparison.html",
              "{out_path}/{cohort}/{target}/1_PC1_vs_PC2.pdf",
              "{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
-             "{out_path}/{cohort}/clinic_data_profil.html",
-             "{out_path}/{cohort}/olink_data_profil.html",
+             "{out_path}/data_{cohort}/profil_clinic_data.html",
+             "{out_path}/data_{cohort}/profil_olink_data.html",
              ],
             out_path=folder_reports,
             target=TARGETS,
@@ -38,16 +38,21 @@ rule all:
 nb="0_load_data_olink_validation.ipynb"
 rule validation_data:
     input:
-        olink=DATA_FOLDER / 'Validation Results/ProDoc_Olink_bridged_QC.tsv',
-        metadata=DATA_FOLDER / 'Validation Results/metadata.tsv',
-        id_map=DATA_FOLDER / 'Validation Results/id.xlsx',
+        OLINK= DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv",
+        METADATA= DATA_FOLDER / "Validation Results" / "metadata.tsv",
+        ID_MAP= DATA_FOLDER / "Validation Results" / "id.xlsx",
+        OLINK_UPDATE= DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv",
         nb=nb
     output:
         olink_prodoc_val=DATA_PROCESSED / 'olink_prodoc_val.xlsx',
         olink_cflow=DATA_PROCESSED / 'olink_cflow.pkl',
-        nb=f"{folder_reports}/data_circaflow/{nb}",
+        nb=f"{folder_reports}/data_cirkaflow/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
+        " -r OLINK {input.OLINK:q}"
+        " -r METADATA {input.METADATA:q}"
+        " -r ID_MAP {input.ID_MAP:q}"
+        " -r OLINK_UPDATE {input.OLINK_UPDATE:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
 
@@ -56,8 +61,8 @@ nb='0_load_data_prodoc.ipynb'
 rule prepare_data_prodoc:
     input:
         nb=nb,
-        olink_prodoc_val=DATA_PROCESSED / 'olink_prodoc_val.xlsx',
-        DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx',
+        DATA_OLINK_VAL=DATA_PROCESSED / 'olink_prodoc_val.xlsx',
+        DATA_CLINIC=DATA_FOLDER / 'DataSheet - fewer variables_2023-02-02 without active cancer.xlsx',
         DATA_OLINK=DATA_FOLDER / 'QC_OlinkProD_wide.tsv',
     output:
         lifelines=FOLDER_REPORTS/"data_prodoc/lifelines.pdf",
@@ -77,6 +82,9 @@ rule prepare_data_prodoc:
         nb=f"{folder_reports}/data_prodoc/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
+        " -r DATA_OLINK_VAL {input.DATA_OLINK_VAL:q}"
+        " -r DATA_CLINIC {input.DATA_CLINIC:q}"
+        " -r DATA_OLINK {input.DATA_OLINK:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
 
@@ -95,9 +103,14 @@ rule prepare_data_cirkaflow:
         olink=project_config.fname_pkl_cirkaflow_olink,
         clinic_num=project_config.fname_pkl_cirkaflow_clinic_num,
         timing_deaths_over_time=FOLDER_REPORTS/"data_cirkaflow/timing_deaths_over_time.pdf",
-        nb=f"{folder_reports}/{nb}",
+        nb=f"{folder_reports}/data_cirkaflow/{nb}",
     shell:
         "papermill {input.nb} {output.nb}"
+        " -r DATA_CLINIC {input.DATA_CLINIC:q}"
+        " -r DATA_OLINK {input.DATA_OLINK:q}"
+        " -r DATA_KEYS {input.DATA_KEYS:q}"
+        " -r DATA_KEYS_UPDATE {input.DATA_KEYS_UPDATE:q}"
+        " -r DATA_DUPLICATES {input.DATA_DUPLICATES:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
 
@@ -133,8 +146,8 @@ rule profile_data:
         olink=lambda w: data_cohort[w.cohort]['olink'], 
         clinic=lambda w: data_cohort[w.cohort]['clinic'],
     output:
-        profiling_report_clinic="{out_path}/{cohort}/clinic_data_profil.html",
-        profiling_report_olink="{out_path}/{cohort}/olink_data_profil.html",
+        profiling_report_clinic="{out_path}/data_{cohort}/profil_clinic_data.html",
+        profiling_report_olink="{out_path}/data_{cohort}/profil_olink_data.html",
     shell:
         "pandas_profiling {input.clinic} {output.profiling_report_clinic} -m"
         " && pandas_profiling {input.olink} {output.profiling_report_olink} -m"

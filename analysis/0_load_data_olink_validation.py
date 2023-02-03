@@ -27,15 +27,31 @@ from pathlib import Path
 import pandas as pd
 
 import config
+DATA_FOLDER = Path(config.data)
+DATA_FOLDER
+
+# %% [markdown]
+# ## Parameters
+
+# %% tags=["parameters"]
+OLINK:str = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
+METADATA:str = DATA_FOLDER / "Validation Results" / "metadata.tsv"
+ID_MAP:str = DATA_FOLDER / "Validation Results" / "id.xlsx"
+OLINK_UPDATE:str = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
 
 # %% [markdown]
 # ## Set default paths and collection
 
 # %%
-DATA_FOLDER = Path(config.data)
-
 inputs = {}
 outputs = {}
+
+inputs['olink'] = OLINK
+inputs['metadata'] = METADATA
+inputs['id_map'] = ID_MAP
+inputs['olink_update'] = OLINK_UPDATE
+
+inputs
 
 # %% [markdown]
 # ## Define Measurment
@@ -49,8 +65,6 @@ measure_olink
 # ## Load Olink validation data
 
 # %%
-inputs[
-    'olink'] = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
 olink = pd.read_table(inputs['olink'], sep='\t', low_memory=False)
 olink = olink.set_index(measure_olink.idx)
 olink
@@ -76,7 +90,6 @@ olink_bridge.to_excel(outputs['bridging_samples'].with_suffix('.xlsx'))
 # - limit of detection (`LOD`)
 
 # %%
-inputs['metadata'] = DATA_FOLDER / "Validation Results" / "metadata.tsv"
 metadata = pd.read_table(inputs["metadata"])
 metadata
 
@@ -84,7 +97,6 @@ metadata
 # ## Sample name to ID mapping  - find subcohorts
 
 # %%
-inputs['id_map'] = DATA_FOLDER / "Validation Results" / "id.xlsx"
 id_map = pd.read_excel(inputs["id_map"], index_col='SampleID')
 id_map
 
@@ -113,8 +125,8 @@ idx_prodoc = _select_idx(query='ProD', expected=29)
 # idx_prodoc
 
 # %%
-idx_circaflow = _select_idx(query='Cflow', expected=101)
-# idx_circaflow
+idx_cirkaflow = _select_idx(query='Cflow', expected=101)
+# idx_cirkaflow
 
 # %%
 olink_prodoc_val = olink.loc[idx_prodoc, measure_olink.measure].unstack()
@@ -127,15 +139,13 @@ olink_prodoc_val.to_pickle(outputs[f'{stem}'])
 olink_prodoc_val.to_excel(outputs[f'{stem}'].with_suffix('.xlsx'))
 
 # %%
-olink_cflow = olink.loc[idx_circaflow, measure_olink.measure].unstack()
+olink_cflow = olink.loc[idx_cirkaflow, measure_olink.measure].unstack()
 olink_cflow.describe()
 
 # %% [markdown]
 # Integrate update from Rasmus (last three non-matching IDs)
 
 # %%
-inputs[
-    'olink_update'] = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
 olink_update = pd.read_table(inputs['olink_update'], sep='\t', low_memory=False)
 olink_update = olink_update.set_index(measure_olink.idx)
 
