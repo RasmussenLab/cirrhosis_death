@@ -182,9 +182,14 @@ rule profile_data:
     output:
         profiling_report_clinic="{out_path}/data_{cohort}/profil_clinic_data.html",
         profiling_report_olink="{out_path}/data_{cohort}/profil_olink_data.html",
+    params:
+        title_clinic="{cohort} - Clinical data",
+        title_olink="{cohort} - Olink data",
     shell:
         "pandas_profiling {input.clinic} {output.profiling_report_clinic} -m"
+        "    --title {params.title_clinic:q}"
         " && pandas_profiling {input.olink} {output.profiling_report_olink} -m"
+        "    --title {params.title_olink:q}"
 
 
 nb = "1_explorative_figures.ipynb"
