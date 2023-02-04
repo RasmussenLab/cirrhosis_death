@@ -56,3 +56,4 @@ dependencies:
     - -e .
     - mrmr_selection
     - njab
+    - pretty-jupyter

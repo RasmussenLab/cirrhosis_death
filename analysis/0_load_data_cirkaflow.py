@@ -255,7 +255,7 @@ if not clinic.columns.is_unique:
 clinic.sample(3)
 
 # %% [markdown]
-# ## Discard healthy samples
+# # Discard healthy samples
 
 # %%
 clinic["Healthy"].value_counts(dropna=False)
@@ -271,7 +271,7 @@ clinic.loc[mask] if mask.sum(
 ) else "All included samples have an inflammation sample date"
 
 # %% [markdown]
-# ## Death over time
+# # Death over time
 #
 # - one plot with absolute time axis
 # - one plot relative to diagnosis date
@@ -388,7 +388,7 @@ files_out[
 savefig(fig, files_out['timing_deaths_over_time'])
 
 # %% [markdown]
-# ## Cleanup steps
+# # Cleanup steps
 
 # %% [markdown]
 # ### Clinic
@@ -473,7 +473,7 @@ olink.head()
 # %%
 olink.loc[:, olink.isna().any()].describe()
 # %% [markdown]
-# ## Timespans
+# # Timespans
 #
 # - death only has right censoring, no drop-out
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
@@ -532,7 +532,7 @@ view.to_excel(files_out['died_before_admission'])
 view
 
 # %% [markdown]
-# ## Kaplan-Meier survival plot
+# # Kaplan-Meier survival plot
 
 # %%
 kmf = KaplanMeierFitter()
@@ -576,7 +576,7 @@ savefig(fig, files_out['deaths_along_time'])
 
 
 # %% [markdown]
-# ## KP plot admissions
+# # KP plot admissions
 #
 # - some die before they have a first admission. We exclude these here
 # - information was only collected up to 180 days after inflammation sample
@@ -608,7 +608,7 @@ files_out['km_plot_admission'] = FOLDER_REPORTS / 'km_plot_admission.pdf'
 savefig(fig, files_out['km_plot_admission'])
 
 # %% [markdown]
-# ## Targets
+# # Targets
 
 # %%
 mask = clinic.columns.str.contains("Adm(90|180)")
@@ -682,7 +682,7 @@ src.pandas.combine_value_counts(targets)
 clinic = clinic.join(targets)
 
 # %% [markdown]
-# ## Censoring
+# # Censoring
 
 # %% [markdown]
 # Date of first Admission is also right-censored
@@ -713,7 +713,7 @@ files_out[
 clinic.to_pickle(config.fname_pkl_cirkaflow_clinic)
 olink.to_pickle(config.fname_pkl_cirkaflow_olink)
 # %% [markdown]
-# ## Dumped combined clinical data as numeric data for ML applications
+# # Dumped combined clinical data as numeric data for ML applications
 
 # %%
 cols_cat = clinic.dtypes == 'category'

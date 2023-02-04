@@ -62,7 +62,7 @@ measure_olink = Measurement(['SampleID', 'Assay'], 'NPX')
 measure_olink
 
 # %% [markdown]
-# ## Load Olink validation data
+# # Load Olink validation data
 
 # %%
 olink = pd.read_table(inputs['olink'], sep='\t', low_memory=False)
@@ -70,7 +70,7 @@ olink = olink.set_index(measure_olink.idx)
 olink
 
 # %% [markdown]
-# ## Contains duplicated bridging samples
+# # Contains duplicated bridging samples
 
 # %%
 duplicated = olink[measure_olink.measure].index.duplicated(keep=False)
@@ -84,7 +84,7 @@ olink_bridge.to_pickle(outputs['bridging_samples'])
 olink_bridge.to_excel(outputs['bridging_samples'].with_suffix('.xlsx'))
 
 # %% [markdown]
-# ## Metadata for Olink features
+# # Metadata for Olink features
 #
 # - `UniProt` ID of `OlinkID`
 # - limit of detection (`LOD`)
@@ -94,7 +94,7 @@ metadata = pd.read_table(inputs["metadata"])
 metadata
 
 # %% [markdown]
-# ## Sample name to ID mapping  - find subcohorts
+# # Sample name to ID mapping  - find subcohorts
 
 # %%
 id_map = pd.read_excel(inputs["id_map"], index_col='SampleID')
@@ -105,7 +105,7 @@ print(id_map["CBMRID"].str[:4].value_counts().to_string())
 
 
 # %% [markdown]
-# ## Select cohorts
+# # Select cohorts
 
 # %%
 def _select_idx(query: str,

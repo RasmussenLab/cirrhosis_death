@@ -94,7 +94,7 @@ olink_val.index = olink_val.index.str[4:].str.replace(' ', '')
 olink_val
 
 # %% [markdown]
-# ## Deaths over time
+# # Deaths over time
 #
 # - one plot with absolute time axis
 # - one plot relative to diagnosis date
@@ -210,7 +210,7 @@ files_out[
 fig.savefig(files_out['timing_deaths_over_time'])
 
 # %% [markdown]
-# ## Cleanup steps
+# # Cleanup steps
 
 # %% [markdown]
 # ### Clinic
@@ -306,7 +306,7 @@ olink = olink.loc[:, 'IL8':]
 olink.loc[:, olink.isna().any()].describe()
 
 # %% [markdown]
-# ## Timespans
+# # Timespans
 #
 # - death only has right censoring, no drop-out
 # - admission has right censoring, and a few drop-outs who die before their first admission for the cirrhosis
@@ -418,7 +418,7 @@ files_out['km_plot_admission'] = FOLDER_REPORTS / 'km_plot_admission.pdf'
 savefig(fig, files_out['km_plot_admission'])
 
 # %% [markdown]
-# ## Targets
+# # Targets
 
 # %%
 mask = clinic.columns.str.contains("Adm(90|180)")
@@ -490,7 +490,7 @@ tab_targets_by_diagnosisPlace
 clinic = clinic.join(targets)
 
 # %% [markdown]
-# ## Censoring
+# # Censoring
 
 # %% [markdown]
 # Date of first Admission is also right-censored
@@ -511,7 +511,7 @@ print('Dead without admission to hospital:',
 clinic.loc[dead_wo_adm, ["DateAdm", "DateInflSample", cols_clinic.LiverAdm180]]
 
 # %% [markdown]
-# ## Different overlaps
+# # Different overlaps
 #
 # - save persons with clinical data as potential validation cohort separately
 # - done after preprocessing of data
@@ -532,7 +532,7 @@ idx_validation
 olink.index.difference(clinic.index)
 
 # %% [markdown]
-# ## Save training cohort separately
+# # Save training cohort separately
 
 # %%
 files_out[config.fname_pkl_clinic.stem] = config.fname_pkl_clinic
@@ -541,7 +541,7 @@ clinic.loc[idx_overlap].to_pickle(config.fname_pkl_clinic)
 olink.loc[idx_overlap].to_pickle(config.fname_pkl_olink)
 
 # %% [markdown]
-# ## Save validation cohort separately
+# # Save validation cohort separately
 
 # %%
 files_out[config.fname_pkl_val_clinic.stem] = config.fname_pkl_val_clinic
@@ -552,7 +552,7 @@ clinic.loc[idx_validation].to_pickle(config.fname_pkl_val_clinic)
 ','.join(idx_validation)
 
 # %% [markdown]
-# ## Dump combined data for comparision
+# # Dump combined data for comparision
 
 
 # %%
@@ -573,7 +573,7 @@ targets.to_pickle(config.fname_pkl_targets)
 clinic[targets.columns].describe()
 
 # %% [markdown]
-# ## Dumped combined clinical data as numeric data for ML applications
+# # Dumped combined clinical data as numeric data for ML applications
 
 # %%
 cols_cat = clinic.dtypes == 'category'
@@ -625,7 +625,7 @@ clinic[numeric_cols].drop(to_drop,
                           axis=1).to_pickle(config.fname_pkl_prodoc_clinic_num)
 
 # %% [markdown]
-# ## Files saved by notebook
+# # Files saved by notebook
 
 # %%
 src.io.print_files(files_out)

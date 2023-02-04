@@ -48,7 +48,7 @@ import src
 import config
 
 # %% [markdown]
-# # Set parameters
+# ## Set parameters
 #
 # - [ ] one large dataset, composing of data should be done elsewhere
 # - [ ] allow feature selection based on requested variables
@@ -112,7 +112,7 @@ y = clinic[TARGET]
 target_counts
 
 # %% [markdown]
-# # Test IDs
+# ## Test IDs
 
 # %%
 olink_val, clinic_val = None, None
@@ -186,13 +186,15 @@ else:
 FOLDER
 
 # %% [markdown]
-# Outputs
+# ### Outputs
 
 # %%
 # out
 files_out = {}
-files_out['3_log_reg.xlsx'] = FOLDER / '3_log_reg.xlsx'
-writer = pd.ExcelWriter(files_out['3_log_reg.xlsx'])
+fname = FOLDER / '3_log_reg.xlsx'
+files_out[fname.stem] = fname
+writer = pd.ExcelWriter(fname)
+fname
 
 # %% [markdown]
 # ## Collect test predictions
@@ -227,7 +229,7 @@ assert X.isna().sum().sum() == 0
 X.shape, X_val.shape
 
 # %% [markdown]
-# ## Principal Components
+# # Principal Components
 #
 # - [ ]  base on selected data
 # - binary features do not strictly need to be normalized
@@ -255,7 +257,7 @@ _ = PCs.pop(TARGET)
 njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
 
 # %% [markdown]
-# ## UMAP
+# # UMAP
 
 # %%
 reducer = umap.UMAP()
@@ -272,7 +274,7 @@ ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
 njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
 
 # %% [markdown]
-# ## Baseline Model - Logistic Regression 
+# # Baseline Model - Logistic Regression 
 # - `age`, `decompensated`, `MELD-score`
 # - use weigthing to counter class imbalances
 
@@ -290,7 +292,7 @@ else:
     weights = None
 
 # %% [markdown]
-# ## Logistic Regression
+# # Logistic Regression
 # Procedure:
 # 1. Select best set of features from entire feature set selected using CV on train split
 # 2. Retrain best model configuration using entire train split and evalute on test split
@@ -392,7 +394,7 @@ results_model.name = model_name
 
 
 # %% [markdown]
-# ### ROC
+# ## ROC
 
 # %%
 ax = plot_auc(results_model, figsize=(4, 2))
@@ -400,7 +402,7 @@ files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
 # %% [markdown]
-# ### PRC
+# ## PRC
 
 # %%
 ax = plot_prc(results_model, figsize=(4, 2))
@@ -408,7 +410,7 @@ files_out['PRAUC'] = FOLDER / 'plot_prauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 
 # %% [markdown]
-# ### Coefficients with/out std. errors
+# ## Coefficients with/out std. errors
 
 # %%
 pd.DataFrame({
@@ -427,7 +429,7 @@ sm_logit = sm_logit.fit()
 sm_logit.summary()
 
 # %% [markdown]
-# ### Selected Features
+# ## Selected Features
 
 # %%
 des_selected_feat = splits.X_train[results_model.selected_features].describe()
@@ -441,7 +443,7 @@ _ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=300)
 njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %% [markdown]
-# ### Plot training data scores
+# ## Plot training data scores
 
 
 # %%
@@ -463,7 +465,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # pred_bins
 
 # %% [markdown]
-# ### Test data scores
+# ## Test data scores
 
 # %%
 score_val = get_score(clf=results_model.model,
@@ -483,7 +485,7 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 # pred_bins_val
 
 # %% [markdown]
-# ## KM plot
+# # KM plot
 
 # %%
 y_km = clinic["dead"] if 'dead' in TARGET else clinic[
@@ -509,7 +511,7 @@ files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
 # %% [markdown]
-# ## Performance evaluations
+# # Performance evaluations
 
 # %%
 prc = pd.DataFrame(results_model.train.prc,
@@ -568,7 +570,7 @@ _
 
 
 # %% [markdown]
-# ## Multiplicative decompositon
+# # Multiplicative decompositon
 
 # %%
 def get_lr_multiplicative_decomposition(results, X, score, y):
@@ -617,7 +619,7 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 
 # %% [markdown]
-# ## Plot TP, TN, FP and FN on PCA plot
+# # Plot TP, TN, FP and FN on PCA plot
 
 # %%
 reducer = umap.UMAP()
@@ -689,6 +691,8 @@ njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 
 # %% [markdown]
 # ## Annotation of Errors for manuel analysis
+#
+# -saved to excel table
 
 # %%
 _ = X[results_model.selected_features].join(pred_train).to_excel(
@@ -697,7 +701,7 @@ _ = X_val[results_model.selected_features].join(predictions).to_excel(
     writer, sheet_name='pred_test_annotated', float_format="%.3f")
 
 # %% [markdown]
-# ## Outputs
+# # Outputs
 
 # %%
 writer.close()

@@ -42,7 +42,7 @@ import config
 import njab
 
 # %% [markdown]
-# # Set parameters
+# ## Set parameters
 
 # %% tags=["parameters"]
 TARGET = 'dead180infl'
@@ -96,12 +96,13 @@ vars_binary = check_isin_clinic(config.clinic_data.vars_binary)
 vars_binary
 
 # %% [markdown]
-# ### Collect outputs
+# ## Collect outputs
 
 # %%
 fname = FOLDER / '1_differential_analysis.xlsx'
 files_out = {fname.name: fname}
 writer = pd.ExcelWriter(fname)
+fname
 
 # %% [markdown]
 # # Differences between groups defined by target
@@ -260,7 +261,7 @@ ana_diff_olink
 writer.close()
 
 # %% [markdown]
-# ## KM plot for top marker
+# # KM plot for top marker
 
 # %%
 marker = ana_diff_olink.iloc[0].name

@@ -52,6 +52,8 @@ rule validation_data:
         olink_prodoc_val=DATA_PROCESSED / "olink_prodoc_val.xlsx",
         olink_cflow=DATA_PROCESSED / "olink_cflow.pkl",
         nb=f"{folder_reports}/data_cirkaflow/{nb}",
+    params:
+        nb_pretty=f"{folder_reports}/data_cirkaflow/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " -r OLINK {input.OLINK:q}"
@@ -60,6 +62,7 @@ rule validation_data:
         " -r OLINK_UPDATE {input.OLINK_UPDATE:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 nb = "0_load_data_prodoc.ipynb"
@@ -90,6 +93,8 @@ rule prepare_data_prodoc:
         fname_pkl_prodoc_clinic=project_config.fname_pkl_prodoc_clinic,
         prodoc_olink_all=project_config.fname_pkl_prodoc_olink,
         nb=f"{folder_reports}/data_prodoc/{nb}",
+    params:
+        nb_pretty=f"{folder_reports}/data_prodoc/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " -r DATA_OLINK_VAL {input.DATA_OLINK_VAL:q}"
@@ -97,6 +102,7 @@ rule prepare_data_prodoc:
         " -r DATA_OLINK {input.DATA_OLINK:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 nb = "0_load_data_cirkaflow.ipynb"
@@ -117,6 +123,8 @@ rule prepare_data_cirkaflow:
         timing_deaths_over_time=FOLDER_REPORTS
         / "data_cirkaflow/timing_deaths_over_time.pdf",
         nb=f"{folder_reports}/data_cirkaflow/{nb}",
+    params:
+        nb_pretty=f"{folder_reports}/data_cirkaflow/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " -r DATA_CLINIC {input.DATA_CLINIC:q}"
@@ -126,6 +134,7 @@ rule prepare_data_cirkaflow:
         " -r DATA_DUPLICATES {input.DATA_DUPLICATES:q}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 nb = "0_training_data_all.ipynb"
@@ -142,10 +151,13 @@ rule combine_all_data:
         project_config.fname_pkl_all_olink,
         project_config.fname_pkl_all_clinic_num,
         nb=f"{folder_reports}/{nb}",
+    params:
+        nb_pretty=f"{folder_reports}/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 ##########################################################################################
@@ -187,10 +199,13 @@ rule explorative_figures:
         nb="{out_path}/" f"{nb}",
         hist_meld_score_cohorts="{out_path}/hist_meld_score_cohorts.pdf",
         hist_meld_score_cohorts_normalized="{out_path}/hist_meld_score_cohorts_normalized.pdf",
+    params:
+        nb_pretty="{out_path}/" f"{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 nb = "1_explorative_analysis.ipynb"
@@ -207,6 +222,8 @@ rule differential_analysis:
         table="{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
     params:
         folder="{out_path}/{cohort}/{target}",
+        nb_pretty="{out_path}/{cohort}/{target}"
+        f"/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -215,6 +232,7 @@ rule differential_analysis:
         " -r TARGET {wildcards.target}"
         " -r FOLDER {params.folder}"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 _cont_vars_w_target = ",".join(project_config.clinic_data.vars_cont + TARGETS)
@@ -229,6 +247,8 @@ rule differential_analysis_cohort:
         nb=f"{folder_reports}/data_prodoc/train_val" f"/{nb}",
     params:
         folder=f"{folder_reports}/data_prodoc/train_val",
+        nb_pretty=f"{folder_reports}/data_prodoc/train_val"
+        f"/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -238,6 +258,7 @@ rule differential_analysis_cohort:
         " -r FOLDER {params.folder}"
         f" -r clinic_cont {_cont_vars_w_target}"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 ##########################################################################################
@@ -275,12 +296,16 @@ rule decision_tree:
         OLINK=project_config.fname_pkl_clinic,
         nb=nb,
     output:
-        nb="{out_path}/{target}" f"/{nb}",
+        nb="{out_path}/prodoc/{target}" f"/{nb}",
+    params:
+        nb_pretty="{out_path}/prodoc/{target}"
+        f"/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
         " -r TARGET {wildcards.target}"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
 
 
 nb = "3_log_reg.ipynb"
@@ -295,6 +320,8 @@ rule log_reg:
         nb="{out_path}/prodoc/{target}/{feat_sets}" f"/{nb}",
     params:
         folder="{out_path}/prodoc/{target}/{feat_sets}",
+        nb_pretty="{out_path}/prodoc/{target}/{feat_sets}"
+        f"/{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -305,3 +332,4 @@ rule log_reg:
         " -r VAL_IDS_query Cflow"
         " -r FOLDER {params.folder}"
         " && jupyter nbconvert {output.nb} --to html"
+        " && jupyter nbconvert {output.nb} --to html --template pj --output {params.nb_pretty}"
