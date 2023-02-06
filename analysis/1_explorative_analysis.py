@@ -57,7 +57,7 @@ da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hyp
 
 # %%
 # TARGET = 'dead180infl'
-TARGET = 'hasLiverAdm180'
+# TARGET = 'hasLiverAdm180'
 # FOLDER = Path(config.folder_reports) / 'cirkaflow' / TARGET
 # CLINIC = config.fname_pkl_cirkaflow_clinic
 # OLINK = config.fname_pkl_cirkaflow_olink
