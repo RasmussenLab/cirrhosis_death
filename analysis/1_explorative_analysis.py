@@ -306,7 +306,7 @@ print(
     f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
 )
 ax.set_title(
-    f'KM curve for {TARGET} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
+    f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
 )
 ax.legend([
     f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
@@ -339,7 +339,7 @@ for marker in rejected.index[1:]:  # first case done above currently
     pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
     ax = compare_km_curves(pred=pred)
     ax.set_title(
-        f'KM curve for {TARGET} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
+        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
     )
     ax.legend([
         f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',

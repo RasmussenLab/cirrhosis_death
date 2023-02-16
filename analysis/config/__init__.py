@@ -40,6 +40,13 @@ TARGETS = [
     'hasLiverAdm180'  # excluded for now
 ]
 
+TARGET_LABELS = {'hasLiverAdm180': 'Admission',
+ 'dead180infl': 'Death',
+ 'is_valdiation_sample': 'Validation sample'}
+
+TRAIN_LABEL = 'study group'
+TEST_LABEL = 'stable cohort'
+
 COMPARE_PRODOC = 'is_valdiation_sample'
 
 Y_KM = {
@@ -56,3 +63,11 @@ feat_sets = {
 feat_sets['OLINK_AND_CLINIC'] = ','.join(feat_sets.values())
 feat_sets['OLINK_AND_SCORES'] =  ','.join(olink.inflammation_panel + clinic_data.scores)
 feat_sets['SCORES_ONLY'] = ','.join(clinic_data.scores)
+
+MODEL_NAMES = {
+    'OLINK': 'Inflammation markers',
+    'CLINIC': 'Clinical variables',
+    'SCORES_ONLY': 'Medical scores',
+    'OLINK_AND_CLINIC': 'Infl. markers and clinical variables',
+    'OLINK_AND_SCORES': 'Infl. markers and medical scores'
+}

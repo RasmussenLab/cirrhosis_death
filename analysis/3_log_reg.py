@@ -26,7 +26,7 @@ import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
-from heatmap import heatmap, corrplot
+from heatmap import corrplot
 import umap
 
 import sklearn
@@ -46,6 +46,9 @@ from njab.sklearn.scoring import get_score, get_pred, get_target_count_per_bin
 import src
 
 import config
+
+logger = logging.getLogger('njab')
+logger.setLevel(logging.INFO)
 
 # %% [markdown]
 # ## Set parameters
@@ -107,7 +110,9 @@ if target_counts.sum() < len(clinic):
     mask = clinic[TARGET].notna()
     clinic, olink = clinic.loc[mask], olink.loc[mask]
 
-y = clinic[TARGET]
+TARGET_LABEL = config.TARGET_LABELS[TARGET]
+
+y = clinic[TARGET].rename(TARGET_LABEL)
 
 target_counts
 
@@ -149,7 +154,7 @@ feat_to_consider
 
 # %%
 # predictors = feat_clinic + olink.columns.to_list()
-model_name = feat_set_to_consider
+model_name = config.MODEL_NAMES[feat_set_to_consider]
 X = clinic.join(olink)[feat_to_consider]
 X
 
@@ -252,8 +257,8 @@ fig, axes = plt.subplots(5, 2, figsize=(8.3, 11.7), layout='constrained')
 PCs = PCs.join(y.astype('category'))
 up_to = min(PCs.shape[-1], 5)
 for (i, j), ax in zip(itertools.combinations(range(up_to), 2), axes.flatten()):
-    PCs.plot.scatter(i, j, c=TARGET, cmap='Paired', ax=ax)
-_ = PCs.pop(TARGET)
+    PCs.plot.scatter(i, j, c=TARGET_LABEL, cmap='Paired', ax=ax)
+_ = PCs.pop(TARGET_LABEL)
 njab.plotting.savefig(fig, files_out['scatter_first_5PCs.pdf'])
 
 # %% [markdown]
@@ -270,11 +275,11 @@ embedding = pd.DataFrame(embedding,
                          index=X_scaled.index,
                          columns=['UMAP 1',
                                   'UMAP 2']).join(y.astype('category'))
-ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
+ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET_LABEL, cmap='Paired')
 njab.plotting.savefig(ax.get_figure(), files_out['umap.pdf'])
 
 # %% [markdown]
-# # Baseline Model - Logistic Regression 
+# # Baseline Model - Logistic Regression
 # - `age`, `decompensated`, `MELD-score`
 # - use weigthing to counter class imbalances
 
@@ -324,7 +329,7 @@ cv_feat = njab.sklearn.find_n_best_features(
     X=splits.X_train,
     y=splits.y_train,
     model=model,
-    name=TARGET,
+    name=TARGET_LABEL,
     groups=y,
     n_features_max=n_features_max,
     scoring=scoring,
@@ -397,7 +402,10 @@ results_model.name = model_name
 # ## ROC
 
 # %%
-ax = plot_auc(results_model, figsize=(4, 2))
+ax = plot_auc(results_model,
+              label_train=config.TRAIN_LABEL,
+              label_test=config.TEST_LABEL,
+              figsize=(4, 2))
 files_out['ROAUC'] = FOLDER / 'plot_roauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 
@@ -405,7 +413,10 @@ njab.plotting.savefig(ax.get_figure(), files_out['ROAUC'])
 # ## PRC
 
 # %%
-ax = plot_prc(results_model, figsize=(4, 2))
+ax = plot_prc(results_model,
+              label_train=config.TRAIN_LABEL,
+              label_test=config.TEST_LABEL,
+              figsize=(4, 2))
 files_out['PRAUC'] = FOLDER / 'plot_prauc.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['PRAUC'])
 
@@ -488,20 +499,17 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 # # KM plot
 
 # %%
-y_km = clinic["dead"] if 'dead' in TARGET else clinic[
-    "LiverAdm180"]  # ToDo: Make less error prone
-
 pred_train = get_pred(
     clf=results_model.model,
     X=splits.X_train[results_model.selected_features]).astype(bool)
 ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
                                                     "DaysToDeathFromInfl"],
-                                    y=y_km.loc[pred_train.index],
+                                    y=y[pred_train.index],
                                     pred=pred_train,
                                     xlabel='Days since inflammation sample',
-                                    ylabel=f'rate {y_km.name}')
+                                    ylabel=f'rate {y.name}')
 
-ax.set_title(f'KM curve for LR based on {feat_set_to_consider}')
+ax.set_title(f'KM curve for LR based on {model_name.lower()}')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
@@ -612,7 +620,7 @@ pivot = pivot.join(clinic.dead.astype(int))
 pivot.describe().iloc[:2]
 
 # %%
-pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET
+pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET_LABEL
                                               ]).agg({'dead': ['count', 'sum']
                                                      })  # more detailed
 pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
@@ -627,9 +635,12 @@ embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
 
 embedding = pd.DataFrame(embedding,
                          index=X_scaled.index,
-                         columns=['UMAP 1',
-                                  'UMAP 2']).join(y.astype('category'))
-ax = embedding.plot.scatter('UMAP 1', 'UMAP 2', c=TARGET, cmap='Paired')
+                         columns=['UMAP dimension 1', 'UMAP dimension 2'
+                                  ]).join(y.astype('category'))
+ax = embedding.plot.scatter('UMAP dimension 1',
+                            'UMAP dimension 2',
+                            c=TARGET_LABEL,
+                            cmap='Paired')
 
 # %%
 predictions['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
@@ -645,7 +656,7 @@ X_val_scaled = scaler.transform(X_val)
 embedding_val = pd.DataFrame(reducer.transform(
     X_val_scaled[results_model.selected_features]),
                              index=X_val_scaled.index,
-                             columns=['UMAP 1', 'UMAP 2'])
+                             columns=['UMAP dimension 1', 'UMAP dimension 2'])
 embedding_val.sample(3)
 
 # %%

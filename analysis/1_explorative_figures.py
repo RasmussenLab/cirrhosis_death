@@ -51,8 +51,8 @@ col = 'MELD-score'
 
 bins = range(int(clinic[col].min()), int(clinic[col].max() + 1), 3)
 
-ax = clinic_prodoc[col].rename('ProDoc').hist(alpha=0.9, legend=True, bins=bins)
-ax = clinic_cflow[col].rename('CirkaFlow').hist(alpha=0.7,
+ax = clinic_prodoc[col].rename(config.TRAIN_LABEL).hist(alpha=0.9, legend=True, bins=bins)
+ax = clinic_cflow[col].rename(config.TEST_LABEL).hist(alpha=0.7,
                                                 legend=True,
                                                 bins=bins)
 _ = ax.set_xlabel(col)
@@ -64,11 +64,11 @@ files_out[fname.name] = fname
 njab.plotting.savefig(fig=ax.get_figure(), name=fname)
 
 # %%
-ax = clinic_prodoc[col].rename('ProDoc').hist(alpha=0.9,
+ax = clinic_prodoc[col].rename(config.TRAIN_LABEL).hist(alpha=0.9,
                                               legend=True,
                                               density=1,
                                               bins=bins)
-ax = clinic_cflow[col].rename('CirkaFlow').hist(alpha=0.7,
+ax = clinic_cflow[col].rename(config.TEST_LABEL).hist(alpha=0.7,
                                                 legend=True,
                                                 density=1,
                                                 bins=bins)
@@ -82,3 +82,5 @@ njab.plotting.savefig(fig=ax.get_figure(), name=fname)
 
 # %%
 src.io.print_files(files_out)
+
+# %%
