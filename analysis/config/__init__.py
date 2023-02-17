@@ -40,19 +40,23 @@ TARGETS = [
     'hasLiverAdm180'  # excluded for now
 ]
 
-TARGET_LABELS = {'hasLiverAdm180': 'Admission',
- 'dead180infl': 'Death',
- 'is_valdiation_sample': 'Validation sample'}
+COMPARE_PRODOC = 'prodoc_second_batch'
+
+TARGET_LABELS = {
+    'hasLiverAdm180': 'Admission',
+    'dead180infl': 'Death',
+    COMPARE_PRODOC: 'Second prodoc batch'
+}
 
 TRAIN_LABEL = 'study group'
 TEST_LABEL = 'stable cohort'
 
-COMPARE_PRODOC = 'is_valdiation_sample'
+
 
 Y_KM = {
     'dead180infl': ('DaysToDeathFromInfl', 'dead'),
     'hasLiverAdm180': ('DaysToAdmFromInflSample', 'hasLiverAdm180'),
-    'is_valdiation_sample': ('DaysToDeathFromInfl', 'is_valdiation_sample')
+    COMPARE_PRODOC: ('DaysToDeathFromInfl', COMPARE_PRODOC)
 }
 
 
