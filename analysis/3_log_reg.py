@@ -630,7 +630,7 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 # # Plot TP, TN, FP and FN on PCA plot
 
 # %%
-reducer = umap.UMAP()
+reducer = umap.UMAP(random_state=42)
 embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
 
 embedding = pd.DataFrame(embedding,
@@ -683,7 +683,7 @@ colors
 # %%
 fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
 for _pcs, ax, _title, _model_pred_label in zip(
-    [embedding, embedding_val], axes, ['train', 'test'],
+    [embedding, embedding_val], axes, [config.TRAIN_LABEL, config.TEST_LABEL],
     [pred_train['label'], predictions['label']]):
     ax = seaborn.scatterplot(
         x=_pcs.iloc[:, 0],
