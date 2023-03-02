@@ -23,6 +23,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import plotly.express as px
 import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
@@ -682,12 +683,12 @@ colors
 
 # %%
 fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
-for _pcs, ax, _title, _model_pred_label in zip(
+for _embedding, ax, _title, _model_pred_label in zip(
     [embedding, embedding_val], axes, [config.TRAIN_LABEL, config.TEST_LABEL],
     [pred_train['label'], predictions['label']]):
     ax = seaborn.scatterplot(
-        x=_pcs.iloc[:, 0],
-        y=_pcs.iloc[:, 1],
+        x=_embedding.iloc[:, 0],
+        y=_embedding.iloc[:, 1],
         hue=_model_pred_label,
         hue_order=['TN', 'TP', 'FN', 'FP'],
         palette=[colors[0], colors[2], colors[1], colors[3]],
@@ -699,6 +700,37 @@ for _pcs, ax, _title, _model_pred_label in zip(
 
 files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
+
+# %% [markdown]
+# ## Interactive plot
+
+# %%
+embedding = embedding.join(X[results_model.selected_features])
+embedding_val = embedding_val.join(X_val[results_model.selected_features])
+embedding['label'], embedding_val['label'] = pred_train['label'], predictions['label']
+embedding['group'], embedding_val['group'] = config.TRAIN_LABEL, config.TEST_LABEL
+combined_embeddings = pd.concat([embedding, embedding_val])
+combined_embeddings.index.name = 'ID'
+
+# %%
+cols = combined_embeddings.columns
+
+TEMPLATE = 'none'
+defaults = dict(width=1600, height=700, template=TEMPLATE)
+
+fig = px.scatter(combined_embeddings.round(3).reset_index(),
+                 x=cols[0],
+                 y=cols[1],
+                 color='label',
+                 facet_col='group',
+                 hover_data=['ID'] + results_model.selected_features,
+                 **defaults)
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[1]))
+
+fname = FOLDER / 'umap_sel_feat.html'
+files_out[fname.name] = fname
+fig.write_html(fname)
+fname
 
 # %% [markdown]
 # ## Annotation of Errors for manuel analysis
@@ -719,3 +751,5 @@ writer.close()
 
 # %%
 files_out
+
+# %%
