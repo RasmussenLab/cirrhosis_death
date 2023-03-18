@@ -7,8 +7,9 @@ MAX_DAYS_INTERVAL: int = 730
 
 base_folder = Path('S:/SUND-CBMR-RegH-cohorts/ProDoc')
 data = Path(base_folder)
-data_processed = base_folder / 'data/processed'
-folder_reports = base_folder / 'reports'
+suffix = ''
+data_processed = base_folder / f'data/processed{suffix}'
+folder_reports = base_folder / f'reports{suffix}'
 
 fname_pkl_clinic = data_processed / 'clinic.pkl'
 fname_pkl_val_clinic = data_processed / 'val_clinic.pkl'
@@ -49,7 +50,7 @@ TARGET_LABELS = {
 }
 
 TRAIN_LABEL = 'study group'
-TEST_LABEL = 'stable cohort'
+TEST_LABEL = 'validation cohort'
 
 
 
