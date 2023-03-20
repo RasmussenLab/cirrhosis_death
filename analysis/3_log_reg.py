@@ -629,7 +629,8 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 # %% [markdown]
 # # Plot TP, TN, FP and FN on PCA plot
-
+#
+# ## UMAP
 # %%
 reducer = umap.UMAP(random_state=42)
 embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
@@ -702,7 +703,7 @@ files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
 njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 
 # %% [markdown]
-# ## Interactive plot
+# ### Interactive UMAP plot
 
 # %%
 embedding = embedding.join(X[results_model.selected_features])
@@ -731,6 +732,102 @@ fname = FOLDER / 'umap_sel_feat.html'
 files_out[fname.name] = fname
 fig.write_html(fname)
 fname
+
+# %% [markdown]
+# ## PCA
+
+# %%
+PCs_train, pca = njab_pca.run_pca(X_scaled[results_model.selected_features], n_components=None)
+ax = njab_pca.plot_explained_variance(pca)
+ax.locator_params(axis='x', integer=True)
+
+fname = FOLDER / "feat_sel_PCA_var_explained_by_PCs.pdf"
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
+
+# %%
+PCs_val = pca.transform(X_val_scaled[results_model.selected_features])
+PCs_val = pd.DataFrame(PCs_val, index=X_val_scaled.index, columns=PCs_train.columns)
+PCs_val
+
+# %%
+fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+for _embedding, ax, _title, _model_pred_label in zip(
+    [PCs_train, PCs_val],
+    axes,
+     [config.TRAIN_LABEL, config.TEST_LABEL],
+    [pred_train['label'], predictions['label']]):
+    ax = seaborn.scatterplot(
+        x=_embedding.iloc[:, 0],
+        y=_embedding.iloc[:, 1],
+        hue=_model_pred_label,
+        hue_order=['TN', 'TP', 'FN', 'FP'],
+        palette=[colors[0], colors[2], colors[1], colors[3]],
+        ax=ax)
+    ax.set_title(_title)
+
+fname = FOLDER / 'pca_sel_feat.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
+
+
+# %%
+max_rows = min(3, len(results_model.selected_features))
+fig, axes = plt.subplots(max_rows, 2,
+                        figsize=(8.3, 11.7),
+                        sharex=True, sharey=True,
+                        layout='constrained')
+
+for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
+    [PCs_train, PCs_val],
+     [config.TRAIN_LABEL, config.TEST_LABEL],
+    [pred_train['label'], predictions['label']])):
+    _row = 0
+    axes[_row, axes_col].set_title(_title)
+    for (i, j) in itertools.combinations(range(max_rows), 2):
+        ax = seaborn.scatterplot(
+            x=_embedding.iloc[:, i],
+            y=_embedding.iloc[:, j],
+            hue=_model_pred_label,
+            hue_order=['TN', 'TP', 'FN', 'FP'],
+            palette=[colors[0], colors[2], colors[1], colors[3]],
+            ax=axes[_row, axes_col])
+        _row += 1
+
+fname = FOLDER / f'pca_sel_feat_up_to_{max_rows}.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
+
+
+# %%
+max_rows = min(3, len(results_model.selected_features))
+fig, axes = plt.subplots(max_rows, 2,
+                         figsize=(8.3, 11.7),
+                         sharex = True,
+                         sharey = True,
+                         layout='constrained')
+
+for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
+    [X_scaled[results_model.selected_features],
+     X_val_scaled[results_model.selected_features]],
+     [config.TRAIN_LABEL, config.TEST_LABEL],
+    [pred_train['label'], predictions['label']])):
+    _row = 0
+    axes[_row, axes_col].set_title(_title)
+    for (i, j) in itertools.combinations(range(max_rows), 2):
+        ax = seaborn.scatterplot(
+            x=_embedding.iloc[:, i],
+            y=_embedding.iloc[:, j],
+            hue=_model_pred_label,
+            hue_order=['TN', 'TP', 'FN', 'FP'],
+            palette=[colors[0], colors[2], colors[1], colors[3]],
+            ax=axes[_row, axes_col])
+        _row += 1
+
+fname = FOLDER / f'sel_feat_up_to_{max_rows}.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
+
 
 # %% [markdown]
 # ## Annotation of Errors for manuel analysis
