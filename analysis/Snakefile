@@ -222,7 +222,7 @@ rule differential_analysis:
         clinic=lambda w: data_cohort[w.cohort]["clinic"],
         nb=nb,
     output:
-        nb="{out_path}/{cohort}/{target}" f"/{nb}",
+        nb="{out_path}/{cohort}/{target}/" f"{nb}",
         pca="{out_path}/{cohort}/{target}/1_PC1_vs_PC2.pdf",
         table="{out_path}/{cohort}/{target}/1_differential_analysis.xlsx",
     params:
@@ -249,7 +249,7 @@ rule differential_analysis_cohort:
         clinic=project_config.fname_pkl_prodoc_clinic,
         nb=nb,
     output:
-        nb=f"{folder_reports}/data_prodoc/train_val" f"/{nb}",
+        nb=f"{folder_reports}/data_prodoc/train_val/" f"{nb}",
     params:
         folder=f"{folder_reports}/data_prodoc/train_val",
         nb_pretty=f"{folder_reports}/data_prodoc/train_val"
@@ -279,7 +279,7 @@ rule compare_train_val:
         nb=nb,
     output:
         sweetviz_report_splits_clinic="{out_path}/prodoc/{target}/train_val_comparison.html",
-        nb="{out_path}/prodoc/{target}" f"/{nb}",
+        nb="{out_path}/prodoc/{target}/" f"{nb}",
     params:
         folder="{out_path}/prodoc/{target}/",
     shell:
@@ -301,10 +301,10 @@ rule decision_tree:
         OLINK=project_config.fname_pkl_clinic,
         nb=nb,
     output:
-        nb="{out_path}/prodoc/{target}" f"/{nb}",
+        nb="{out_path}/prodoc/{target}/" f"{nb}",
     params:
-        nb_pretty="{out_path}/prodoc/{target}"
-        f"/{nb.replace('.ipynb', '_pretty.html')}",
+        nb_pretty="{out_path}/prodoc/{target}/"
+        f"{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
@@ -322,11 +322,11 @@ rule log_reg:
         OLINK=project_config.fname_pkl_all_olink,
         nb=nb,
     output:
-        nb="{out_path}/prodoc/{target}/{feat_sets}" f"/{nb}",
+        nb="{out_path}/prodoc/{target}/{feat_sets}/" f"{nb}",
     params:
         folder="{out_path}/prodoc/{target}/{feat_sets}",
-        nb_pretty="{out_path}/prodoc/{target}/{feat_sets}"
-        f"/{nb.replace('.ipynb', '_pretty.html')}",
+        nb_pretty="{out_path}/prodoc/{target}/{feat_sets}/"
+        f"{nb.replace('.ipynb', '_pretty.html')}",
     shell:
         "papermill {input.nb} {output.nb}"
         " --inject-paths"
