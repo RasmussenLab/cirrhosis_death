@@ -633,16 +633,19 @@ pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 # ## UMAP
 # %%
 reducer = umap.UMAP(random_state=42)
-embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
+# bug: how does UMAP works with only one feature?
+# make sure to have two or more features?
+M_sel = len(results_model.selected_features)
+if M_sel > 1:
+    embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
 
-embedding = pd.DataFrame(embedding,
-                         index=X_scaled.index,
-                         columns=['UMAP dimension 1', 'UMAP dimension 2'
-                                  ]).join(y.astype('category'))
-ax = embedding.plot.scatter('UMAP dimension 1',
-                            'UMAP dimension 2',
-                            c=TARGET_LABEL,
-                            cmap='Paired')
+    embedding = pd.DataFrame(embedding,
+                            index=X_scaled.index,
+                            columns=['UMAP dimension 1', 'UMAP dimension 2'
+                                    ]).join(y.astype('category'))
+    display(embedding.head(3))
+else:
+    embedding=None
 
 # %%
 predictions['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
@@ -655,11 +658,12 @@ predictions.loc[mask].sort_values('score', ascending=False)
 
 # %%
 X_val_scaled = scaler.transform(X_val)
-embedding_val = pd.DataFrame(reducer.transform(
-    X_val_scaled[results_model.selected_features]),
-                             index=X_val_scaled.index,
-                             columns=['UMAP dimension 1', 'UMAP dimension 2'])
-embedding_val.sample(3)
+if embedding is not None:
+    embedding_val = pd.DataFrame(reducer.transform(
+        X_val_scaled[results_model.selected_features]),
+                                index=X_val_scaled.index,
+                                columns=['UMAP dimension 1', 'UMAP dimension 2'])
+    embedding_val.sample(3)
 
 # %%
 pred_train = (
@@ -683,55 +687,58 @@ colors = seaborn.color_palette(n_colors=4)
 colors
 
 # %%
-fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
-for _embedding, ax, _title, _model_pred_label in zip(
-    [embedding, embedding_val], axes, [config.TRAIN_LABEL, config.TEST_LABEL],
-    [pred_train['label'], predictions['label']]):
-    ax = seaborn.scatterplot(
-        x=_embedding.iloc[:, 0],
-        y=_embedding.iloc[:, 1],
-        hue=_model_pred_label,
-        hue_order=['TN', 'TP', 'FN', 'FP'],
-        palette=[colors[0], colors[2], colors[1], colors[3]],
-        ax=ax)
-    ax.set_title(_title)
+if embedding is not None:
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+    for _embedding, ax, _title, _model_pred_label in zip(
+        [embedding, embedding_val], axes, [config.TRAIN_LABEL, config.TEST_LABEL],
+        [pred_train['label'], predictions['label']]):
+        ax = seaborn.scatterplot(
+            x=_embedding.iloc[:, 0],
+            y=_embedding.iloc[:, 1],
+            hue=_model_pred_label,
+            hue_order=['TN', 'TP', 'FN', 'FP'],
+            palette=[colors[0], colors[2], colors[1], colors[3]],
+            ax=ax)
+        ax.set_title(_title)
 
-# files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
-# njab.plotting.savefig(fig, files_out['pred_pca_labeled'])
+    # files_out['pred_pca_labeled'] = FOLDER / 'pred_pca_labeled.pdf'
+    # njab.plotting.savefig(fig, files_out['pred_pca_labeled'])
 
-files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
-njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
+    files_out['umap_sel_feat.pdf'] = FOLDER / 'umap_sel_feat.pdf'
+    njab.plotting.savefig(ax.get_figure(), files_out['umap_sel_feat.pdf'])
 
 # %% [markdown]
 # ### Interactive UMAP plot
 
 # %%
-embedding = embedding.join(X[results_model.selected_features])
-embedding_val = embedding_val.join(X_val[results_model.selected_features])
-embedding['label'], embedding_val['label'] = pred_train['label'], predictions['label']
-embedding['group'], embedding_val['group'] = config.TRAIN_LABEL, config.TEST_LABEL
-combined_embeddings = pd.concat([embedding, embedding_val])
-combined_embeddings.index.name = 'ID'
+if embedding is not None:
+    embedding = embedding.join(X[results_model.selected_features])
+    embedding_val = embedding_val.join(X_val[results_model.selected_features])
+    embedding['label'], embedding_val['label'] = pred_train['label'], predictions['label']
+    embedding['group'], embedding_val['group'] = config.TRAIN_LABEL, config.TEST_LABEL
+    combined_embeddings = pd.concat([embedding, embedding_val])
+    combined_embeddings.index.name = 'ID'
 
 # %%
-cols = combined_embeddings.columns
+if embedding is not None:
+    cols = combined_embeddings.columns
 
-TEMPLATE = 'none'
-defaults = dict(width=1600, height=700, template=TEMPLATE)
+    TEMPLATE = 'none'
+    defaults = dict(width=1600, height=700, template=TEMPLATE)
 
-fig = px.scatter(combined_embeddings.round(3).reset_index(),
-                 x=cols[0],
-                 y=cols[1],
-                 color='label',
-                 facet_col='group',
-                 hover_data=['ID'] + results_model.selected_features,
-                 **defaults)
-fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[1]))
+    fig = px.scatter(combined_embeddings.round(3).reset_index(),
+                    x=cols[0],
+                    y=cols[1],
+                    color='label',
+                    facet_col='group',
+                    hover_data=['ID'] + results_model.selected_features,
+                    **defaults)
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[1]))
 
-fname = FOLDER / 'umap_sel_feat.html'
-files_out[fname.name] = fname
-fig.write_html(fname)
-fname
+    fname = FOLDER / 'umap_sel_feat.html'
+    files_out[fname.name] = fname
+    fig.write_html(fname)
+    print(fname)
 
 # %% [markdown]
 # ## PCA
@@ -751,82 +758,109 @@ PCs_val = pd.DataFrame(PCs_val, index=X_val_scaled.index, columns=PCs_train.colu
 PCs_val
 
 # %%
-fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
-for _embedding, ax, _title, _model_pred_label in zip(
-    [PCs_train, PCs_val],
-    axes,
-     [config.TRAIN_LABEL, config.TEST_LABEL],
-    [pred_train['label'], predictions['label']]):
-    ax = seaborn.scatterplot(
-        x=_embedding.iloc[:, 0],
-        y=_embedding.iloc[:, 1],
-        hue=_model_pred_label,
-        hue_order=['TN', 'TP', 'FN', 'FP'],
-        palette=[colors[0], colors[2], colors[1], colors[3]],
-        ax=ax)
-    ax.set_title(_title)
-
-fname = FOLDER / 'pca_sel_feat.pdf'
-files_out[fname.name] = fname
-njab.plotting.savefig(ax.get_figure(), fname)
-
-
-# %%
-max_rows = min(3, len(results_model.selected_features))
-fig, axes = plt.subplots(max_rows, 2,
-                        figsize=(8.3, 11.7),
-                        sharex=True, sharey=True,
-                        layout='constrained')
-
-for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
-    [PCs_train, PCs_val],
-     [config.TRAIN_LABEL, config.TEST_LABEL],
-    [pred_train['label'], predictions['label']])):
-    _row = 0
-    axes[_row, axes_col].set_title(_title)
-    for (i, j) in itertools.combinations(range(max_rows), 2):
+if M_sel > 1:
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+    for _embedding, ax, _title, _model_pred_label in zip(
+        [PCs_train, PCs_val],
+        axes,
+        [config.TRAIN_LABEL, config.TEST_LABEL],
+        [pred_train['label'], predictions['label']]):
         ax = seaborn.scatterplot(
-            x=_embedding.iloc[:, i],
-            y=_embedding.iloc[:, j],
+            x=_embedding.iloc[:, 0],
+            y=_embedding.iloc[:, 1],
             hue=_model_pred_label,
             hue_order=['TN', 'TP', 'FN', 'FP'],
             palette=[colors[0], colors[2], colors[1], colors[3]],
-            ax=axes[_row, axes_col])
-        _row += 1
+            ax=ax)
+        ax.set_title(_title)
 
-fname = FOLDER / f'pca_sel_feat_up_to_{max_rows}.pdf'
-files_out[fname.name] = fname
-njab.plotting.savefig(ax.get_figure(), fname)
+    fname = FOLDER / 'pca_sel_feat.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
 
 
 # %%
-max_rows = min(3, len(results_model.selected_features))
-fig, axes = plt.subplots(max_rows, 2,
-                         figsize=(8.3, 11.7),
-                         sharex = True,
-                         sharey = True,
-                         layout='constrained')
+if M_sel > 1:
+    max_rows = min(3, len(results_model.selected_features))
+    fig, axes = plt.subplots(max_rows, 2,
+                            figsize=(8.3, 11.7),
+                            sharex=True, sharey=True,
+                            layout='constrained')
 
-for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
-    [X_scaled[results_model.selected_features],
-     X_val_scaled[results_model.selected_features]],
-     [config.TRAIN_LABEL, config.TEST_LABEL],
-    [pred_train['label'], predictions['label']])):
-    _row = 0
-    axes[_row, axes_col].set_title(_title)
-    for (i, j) in itertools.combinations(range(max_rows), 2):
-        ax = seaborn.scatterplot(
-            x=_embedding.iloc[:, i],
-            y=_embedding.iloc[:, j],
-            hue=_model_pred_label,
-            hue_order=['TN', 'TP', 'FN', 'FP'],
-            palette=[colors[0], colors[2], colors[1], colors[3]],
-            ax=axes[_row, axes_col])
-        _row += 1
+    for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
+        [PCs_train, PCs_val],
+        [config.TRAIN_LABEL, config.TEST_LABEL],
+        [pred_train['label'], predictions['label']])):
+        _row = 0
+        axes[_row, axes_col].set_title(_title)
+        for (i, j) in itertools.combinations(range(max_rows), 2):
+            ax = seaborn.scatterplot(
+                x=_embedding.iloc[:, i],
+                y=_embedding.iloc[:, j],
+                hue=_model_pred_label,
+                hue_order=['TN', 'TP', 'FN', 'FP'],
+                palette=[colors[0], colors[2], colors[1], colors[3]],
+                ax=axes[_row, axes_col])
+            _row += 1
 
-fname = FOLDER / f'sel_feat_up_to_{max_rows}.pdf'
-files_out[fname.name] = fname
-njab.plotting.savefig(ax.get_figure(), fname)
+    fname = FOLDER / f'pca_sel_feat_up_to_{max_rows}.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
+
+
+# %% [markdown]
+# ### Features
+# - top 3 scaled n_features_max (scatter)
+# - or unscalled single features (swarmplot)
+
+# %%
+if M_sel > 1:
+    max_rows = min(3, len(results_model.selected_features))
+    fig, axes = plt.subplots(max_rows, 2,
+                            figsize=(8.3, 11.7),
+                            sharex = True,
+                            sharey = True,
+                            layout='constrained')
+
+    for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
+        [X_scaled[results_model.selected_features],
+        X_val_scaled[results_model.selected_features]],
+        [config.TRAIN_LABEL, config.TEST_LABEL],
+        [pred_train['label'], predictions['label']])):
+        _row = 0
+        axes[_row, axes_col].set_title(_title)
+        for (i, j) in itertools.combinations(range(max_rows), 2):
+            ax = seaborn.scatterplot(
+                x=_embedding.iloc[:, i],
+                y=_embedding.iloc[:, j],
+                hue=_model_pred_label,
+                hue_order=['TN', 'TP', 'FN', 'FP'],
+                palette=[colors[0], colors[2], colors[1], colors[3]],
+                ax=axes[_row, axes_col])
+            _row += 1
+
+    fname = FOLDER / f'sel_feat_up_to_{max_rows}.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
+else:
+    fig, axes = plt.subplots(1, 1,
+                        figsize=(6, 2),
+                        layout='constrained'
+                        )
+    single_feature = results_model.selected_features[0]
+    data = pd.concat([
+        X[single_feature].to_frame().join(pred_train['label']).assign(group=config.TRAIN_LABEL),
+        X_val[single_feature].to_frame().join(predictions['label']).assign(group=config.TEST_LABEL)
+    ])
+    ax = seaborn.swarmplot(data=data, 
+                           x='group',
+                           y=single_feature,
+                           hue='label',
+                           ax=axes
+                           )
+    fname = FOLDER / f'sel_feat_{single_feature}.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
 
 
 # %% [markdown]
@@ -835,10 +869,11 @@ njab.plotting.savefig(ax.get_figure(), fname)
 # -saved to excel table
 
 # %%
-_ = X[results_model.selected_features].join(pred_train).to_excel(
+X[results_model.selected_features].join(pred_train).to_excel(
     writer, sheet_name='pred_train_annotated', float_format="%.3f")
-_ = X_val[results_model.selected_features].join(predictions).to_excel(
+X_val[results_model.selected_features].join(predictions).to_excel(
     writer, sheet_name='pred_test_annotated', float_format="%.3f")
+
 
 # %% [markdown]
 # # Outputs
