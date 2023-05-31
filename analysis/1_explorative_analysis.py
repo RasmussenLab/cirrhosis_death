@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import seaborn
 
 import src
-from src.plotting.km import compare_km_curves
+from src.plotting.km import compare_km_curves, log_rank_test
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
 from njab.sklearn.scoring import ConfusionMatrix
@@ -276,7 +276,7 @@ model = model.fit(X=olink[marker].to_frame(), y=happend)
 # %% [markdown] tags=[]
 # For the univariate logistic regression
 # $$ ln \frac{p}{1-p} = \beta_0 + \beta_1 \cdot x $$
-# the cutoff `c=0.5` corresponds a feature value of: 
+# the cutoff `c=0.5` corresponds a feature value of:
 # $$ x = - \frac{\beta_0}{\beta_1} $$
 
 # %%
@@ -298,15 +298,24 @@ compare_km_curves = partial(compare_km_curves,
                             xlabel='Days since inflammation sample',
                             ylabel=f'rate {y_km.name}')
 
+log_rank_test = partial(
+    log_rank_test,
+    time=time_km,
+    y=y_km,
+)
+
 ax = compare_km_curves(pred=pred)
 print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+
+res = log_rank_test(mask=pred)
+
 cutoff = -float(model.intercept_) / float(model.coef_)
 direction = '>' if model.coef_ > 0 else '<'
 print(
     f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
 )
 ax.set_title(
-    f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
+    f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
 )
 ax.legend([
     f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
@@ -338,8 +347,9 @@ for marker in rejected.index[1:]:  # first case done above currently
     )
     pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
     ax = compare_km_curves(pred=pred)
+    res = log_rank_test(mask=pred)
     ax.set_title(
-        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} (cutoff{direction}{cutoff:.2f})'
+        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
     )
     ax.legend([
         f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',

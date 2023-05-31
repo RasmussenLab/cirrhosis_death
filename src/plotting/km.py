@@ -1,4 +1,5 @@
 from matplotlib.axes import Axes
+import lifelines.statistics
 from lifelines import KaplanMeierFitter
 import pandas as pd
 
@@ -55,3 +56,36 @@ def compare_km_curves(
                   ylabel=ylabel,
                   legend=False)
     return ax
+
+
+def log_rank_test(
+    time: pd.Series,
+    y: pd.Series,
+    mask: pd.Series,
+) -> lifelines.statistics.StatisticalResult:
+    """Compare Kaplan-Meier curves for two groups (e.g. based on binary prediction).
+    Given the grouping in the mask, are both KM curves significantly different?
+
+    Parameters
+    ----------
+    time : pd.Series
+        Time to event variable
+    y : pd.Series
+        event variable
+    mask : pd.Series
+        mask for two groups, e.g. predictions
+
+
+    Returns
+    -------
+    StatisticalResult:
+        object containing results with a wrapper for visualization
+    """
+    mask = mask.astype(bool)
+    res = lifelines.statistics.logrank_test(
+        time.loc[mask],
+        time.loc[~mask],
+        y.loc[mask],
+        y.loc[~mask],
+    )
+    return res
