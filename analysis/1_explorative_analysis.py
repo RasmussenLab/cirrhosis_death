@@ -26,8 +26,7 @@ import pandas as pd
 
 import pingouin as pg
 import sklearn
-from sklearn.metrics import precision_recall_curve, roc_curve
-from lifelines import KaplanMeierFitter
+from lifelines.plotting import add_at_risk_counts
 
 import matplotlib.pyplot as plt
 import seaborn
@@ -36,7 +35,6 @@ import src
 from src.plotting.km import compare_km_curves, log_rank_test
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
-from njab.sklearn.scoring import ConfusionMatrix
 
 import config
 import njab
@@ -262,78 +260,30 @@ writer.close()
 
 # %% [markdown]
 # # KM plot for top marker
-
-# %%
-marker = ana_diff_olink.iloc[0].name
-marker
-
-# %%
-class_weight = 'balanced'
-# class_weight=None
-model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
-model = model.fit(X=olink[marker].to_frame(), y=happend)
-
-# %% [markdown] tags=[]
-# For the univariate logistic regression
-# $$ ln \frac{p}{1-p} = \beta_0 + \beta_1 \cdot x $$
-# the cutoff `c=0.5` corresponds a feature value of:
-# $$ x = - \frac{\beta_0}{\beta_1} $$
-
-# %%
-cutoff = -float(model.intercept_) / float(model.coef_)
-print(f"Custom cutoff defined by Logistic regressor: {cutoff:.3f}")
-
-# %%
-pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
-pred.sum()
-
-# %%
-y_km = clinic[Y_KM]
-
-time_km = clinic[TIME_KM]
-
-compare_km_curves = partial(compare_km_curves,
-                            time=time_km,
-                            y=y_km,
-                            xlabel='Days since inflammation sample',
-                            ylabel=f'rate {y_km.name}')
-
-log_rank_test = partial(
-    log_rank_test,
-    time=time_km,
-    y=y_km,
-)
-
-ax = compare_km_curves(pred=pred)
-print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
-
-res = log_rank_test(mask=pred)
-
-cutoff = -float(model.intercept_) / float(model.coef_)
-direction = '>' if model.coef_ > 0 else '<'
-print(
-    f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
-)
-ax.set_title(
-    f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
-)
-ax.legend([
-    f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
-    f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'
-])
-fname = FOLDER / f'KM_plot_{marker}.pdf'
-files_out[fname.name] = fname
-njab.plotting.savefig(ax.get_figure(), fname)
+# Direction of cutoff cannot be directly inferred from cutoff
 
 # %%
 rejected = ana_diff_olink.query("`('ancova', 'rejected')` == True")
 rejected
 
-# %% [markdown]
-# Direction of cutoff cannot be directly inferred from cutoff
-
 # %%
-for marker in rejected.index[1:]:  # first case done above currently
+# settings for plots
+class_weight = 'balanced'
+y_km = clinic[Y_KM]
+time_km = clinic[TIME_KM]
+compare_km_curves = partial(compare_km_curves,
+                            time=time_km,
+                            y=y_km,
+                            xlabel='Days since inflammation sample',
+                            ylabel=f'rate {y_km.name}')
+log_rank_test = partial(
+    log_rank_test,
+    time=time_km,
+    y=y_km,
+)
+TOP_N = None # None = all
+# %%
+for marker in rejected.index[:TOP_N]:  # first case done above currently
     fig, ax = plt.subplots()
     class_weight = 'balanced'
     # class_weight=None
@@ -346,7 +296,7 @@ for marker in rejected.index[1:]:  # first case done above currently
         f"Custom cutoff defined by Logistic regressor for {marker:>10}: {cutoff:.3f}"
     )
     pred = njab.sklearn.scoring.get_pred(model, olink[marker].to_frame())
-    ax = compare_km_curves(pred=pred)
+    ax, kmf_0, kmf_1 = compare_km_curves(pred=pred)
     res = log_rank_test(mask=pred)
     ax.set_title(
         f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
@@ -356,6 +306,12 @@ for marker in rejected.index[1:]:  # first case done above currently
         f"KP pred=1 (N={pred.sum()})", '95% CI (pred=1)'
     ])
     fname = FOLDER / f'KM_plot_{marker}.pdf'
+    files_out[fname.name] = fname
+    njab.plotting.savefig(ax.get_figure(), fname)
+
+    # add counts
+    add_at_risk_counts(kmf_0, kmf_1, ax=ax)
+    fname = FOLDER / f'KM_plot_{marker}_w_counts.pdf'
     files_out[fname.name] = fname
     njab.plotting.savefig(ax.get_figure(), fname)
 

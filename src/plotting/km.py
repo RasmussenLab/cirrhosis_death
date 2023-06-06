@@ -13,6 +13,7 @@ def compare_km_curves(
     xlim: tuple[int] = (0, 180),
     xlabel: str = None,
     ylabel: str = None,
+    add_risk_counts=False,
 ) -> Axes:
     """Compare Kaplan-Meier curves for two groups (e.g. based on binary prediction)
 
@@ -38,24 +39,31 @@ def compare_km_curves(
 
     Returns
     -------
-    Axes
-        _description_
+    Axes, KaplanMeierFitter, KaplanMeierFitter
+        Axes object,
+        KaplanMeierFitter for predited as 0,
+        KaplanMeierFitter for predicted as 1
+        
     """
-    kmf = KaplanMeierFitter()
     pred = pred.astype(bool)
-
     mask = ~pred
-    kmf.fit(time.loc[mask], event_observed=y.loc[mask])
-    ax = kmf.plot(xlim=xlim, ylim=ylim, legend=False, ax=ax)
+
+    kmf_0 = KaplanMeierFitter()
+    kmf_0.fit(time.loc[mask], event_observed=y.loc[mask])
+    ax = kmf_0.plot(xlim=xlim, ylim=ylim, legend=False, ax=ax)
 
     mask = pred
-    kmf.fit(time.loc[mask], event_observed=y.loc[mask])
-    ax = kmf.plot(xlim=xlim,
+    kmf_1 = KaplanMeierFitter()
+    kmf_1.fit(time.loc[mask], event_observed=y.loc[mask])
+    ax = kmf_1.plot(xlim=xlim,
                   ylim=ylim,
                   xlabel=xlabel,
                   ylabel=ylabel,
                   legend=False)
-    return ax
+    if add_risk_counts:
+        from lifelines.plotting import add_at_risk_counts
+        add_at_risk_counts(kmf_0, kmf_1, ax=ax)
+    return ax, kmf_0, kmf_1
 
 
 def log_rank_test(

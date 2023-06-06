@@ -32,7 +32,6 @@ import umap
 
 import sklearn
 import sklearn.impute
-from sklearn.metrics import precision_recall_curve, roc_curve
 from sklearn.metrics import make_scorer, log_loss
 import statsmodels.api as sm
 
@@ -503,19 +502,23 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 pred_train = get_pred(
     clf=results_model.model,
     X=splits.X_train[results_model.selected_features]).astype(bool)
-ax = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
+ax, _, _ = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
                                                     "DaysToDeathFromInfl"],
                                     y=y[pred_train.index],
                                     pred=pred_train,
                                     xlabel='Days since inflammation sample',
                                     ylabel=f'rate {y.name}')
 
-ax.set_title(f'KM curve for LR based on {model_name.lower()}')
+res = src.plotting.km.log_rank_test(time=clinic.loc[pred_train.index,
+                                                    "DaysToDeathFromInfl"],
+                                    y=y[pred_train.index],
+                                    mask=pred_train)
+ax.set_title(f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
 ])
-fname = FOLDER / f'KM_plot_model.pdf'
+fname = FOLDER / f'KM_plot_model_train.pdf'
 files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
@@ -555,17 +558,6 @@ _.to_excel(writer, f"CM_test_cutoff_adapted")
 _
 
 # %%
-# y_pred_val = njab.sklearn.scoring.get_custom_pred(
-#     clf=results_model.model,
-#     X=splits.X_test[results_model.selected_features],
-#     cutoff=0.5)
-# predictions[model_name] = y_pred_val
-# predictions['dead'] = clinic['dead']
-# _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
-# # _.to_excel(writer, "CM_test")
-# _
-
-# %%
 y_pred_val = get_pred(clf=results_model.model,
                       X=splits.X_test[results_model.selected_features])
 predictions[model_name] = y_pred_val
@@ -577,6 +569,29 @@ _.columns = pd.MultiIndex.from_tuples([
 _.to_excel(writer, "CM_test_cutoff_0.5")
 _
 
+# %%
+# ! km plot
+y_pred_val = y_pred_val.astype(bool)
+
+ax, _, _ = src.plotting.compare_km_curves(
+    time=clinic.loc[y_pred_val.index, "DaysToDeathFromInfl"],
+    y=y_val[y_pred_val.index],
+    pred=y_pred_val,
+    xlabel='Days since inflammation sample',
+    ylabel=f'rate {y.name}')
+
+res = src.plotting.km.log_rank_test(time=clinic.loc[y_pred_val.index,
+                                                    "DaysToDeathFromInfl"],
+                                    y=y_val[y_pred_val.index],
+                                    mask=y_pred_val)
+ax.set_title(f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
+ax.legend([
+    f"KP pred=0 (N={(~y_pred_val).sum()})", '95% CI (pred=0)',
+    f"KP pred=1 (N={y_pred_val.sum()})", '95% CI (pred=1)'
+])
+fname = FOLDER / f'KM_plot_model_val.pdf'
+files_out[fname.name] = fname
+njab.plotting.savefig(ax.get_figure(), fname)
 
 # %% [markdown]
 # # Multiplicative decompositon
@@ -818,8 +833,8 @@ if M_sel > 1:
     max_rows = min(3, len(results_model.selected_features))
     fig, axes = plt.subplots(max_rows, 2,
                             figsize=(8.3, 11.7),
-                            sharex = True,
-                            sharey = True,
+                            sharex = False,
+                            sharey = False,
                             layout='constrained')
 
     for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
@@ -837,6 +852,9 @@ if M_sel > 1:
                 hue_order=['TN', 'TP', 'FN', 'FP'],
                 palette=[colors[0], colors[2], colors[1], colors[3]],
                 ax=axes[_row, axes_col])
+            # ! scale each row and each column
+            # X_scaled[results_model.selected_features][i]
+            # X_val_scaled[results_model.selected_features][j]
             _row += 1
 
     fname = FOLDER / f'sel_feat_up_to_{max_rows}.pdf'
@@ -852,7 +870,7 @@ else:
         X[single_feature].to_frame().join(pred_train['label']).assign(group=config.TRAIN_LABEL),
         X_val[single_feature].to_frame().join(predictions['label']).assign(group=config.TEST_LABEL)
     ])
-    ax = seaborn.swarmplot(data=data, 
+    ax = seaborn.swarmplot(data=data,
                            x='group',
                            y=single_feature,
                            hue='label',

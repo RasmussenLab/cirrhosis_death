@@ -359,7 +359,7 @@ ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
     ylabel='survival rate',
     ax=ax,
     legend=False)
-ax.legend([f"KP admission (N={clinic['dead'].notna().sum()})", '95% CI'])
+ax.legend([f"death (N={clinic['dead'].notna().sum()})", '95% CI'])
 _ = ax.vlines(90, *y_lim)
 _ = ax.vlines(180, *y_lim)
 files_out['km_plot_death'] = FOLDER_REPORTS / 'km_plot_death.pdf'
