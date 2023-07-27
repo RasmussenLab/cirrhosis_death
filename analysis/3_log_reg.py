@@ -550,7 +550,7 @@ y_pred_val = njab.sklearn.scoring.get_custom_pred(
     cutoff=cutoff)
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
-_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe()
 _.columns = pd.MultiIndex.from_tuples([
     (t[0] + f" - {cutoff:.3f}", t[1]) for t in _.columns
 ])
@@ -562,7 +562,7 @@ y_pred_val = get_pred(clf=results_model.model,
                       X=splits.X_test[results_model.selected_features])
 predictions[model_name] = y_pred_val
 predictions['dead'] = clinic['dead']
-_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe
+_ = ConfusionMatrix(y_val, y_pred_val).as_dataframe()
 _.columns = pd.MultiIndex.from_tuples([
     (t[0] + f" - {0.5}", t[1]) for t in _.columns
 ])
