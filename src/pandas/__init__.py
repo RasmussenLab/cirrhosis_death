@@ -40,6 +40,7 @@ def combine_value_counts(X: pd.DataFrame, dropna=True) -> pd.DataFrame:
 
 
 def value_counts_with_margins(y: pd.Series) -> pd.DataFrame:
+    """Value counts of Series with proportion as margins."""
     ret = y.value_counts().to_frame('counts')
     ret.index.name = y.name
     ret['prop'] = y.value_counts(normalize=True)
@@ -48,7 +49,7 @@ def value_counts_with_margins(y: pd.Series) -> pd.DataFrame:
 
 def counts_with_proportion(s: pd.Series) -> pd.DataFrame:
     """Counts with proportion of counts(!). 
-    
+
     Note: In case of missing values the proportion is not based on the total number of 
     rows in the DataFrame.
     """
@@ -107,17 +108,23 @@ def get_unique_non_unique_columns(df: pd.DataFrame) -> SimpleNamespace:
     return columns
 
 
-def col_isin_df(l:typing.Union[list, str], df):
-    """Remove item from passed list and warn."""
-    if isinstance(l, str):
-        l = l.split(',')
+def col_isin_df(cols: typing.Union[list, str], df: pd.DataFrame) -> list:
+    """Remove item (column) from passed list if not in DataFrame.
+       Warning is issued for missing items.
+
+       cols can be a comma-separated string of column names.
+    """
+    if isinstance(cols, str):
+        cols = cols.split(',')
     ret = list()
-    for _var in l:
+    for _var in cols:
         if _var not in df.columns:
-            logging.warning(f"Desired variable not found: {_var}", stacklevel=0)
+            logging.warning(
+                f"Desired variable not found: {_var}", stacklevel=0)
             continue
         ret.append(_var)
     return ret
+
 
 def prop_unique_index(df: pd.DataFrame) -> pd.DataFrame:
     counts = df.index.value_counts()
@@ -126,12 +133,15 @@ def prop_unique_index(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def replace_with(string_key: str, replace: str = "()/", replace_with: str = '') -> str:
+    """Replace characters in a string with a replacement."""
     for symbol in replace:
         string_key = string_key.replace(symbol, replace_with)
     return string_key
 
 
 def get_colums_accessor(df: pd.DataFrame, all_lower_case=False) -> omegaconf.OmegaConf:
+    """Get an dictionary augmented with attribute access of column name as key
+       with white spaces replaced and the original column name as values."""
     cols = {replace_with(col.replace(' ', '_').replace(
         '-', '_')): col for col in df.columns}
     if all_lower_case:
@@ -140,7 +150,8 @@ def get_colums_accessor(df: pd.DataFrame, all_lower_case=False) -> omegaconf.Ome
 
 
 def select_max_by(df: pd.DataFrame, grouping_columns: list, selection_column: str) -> pd.DataFrame:
-    df = df.sort_values(by=[*grouping_columns, selection_column], ascending=False)
+    df = df.sort_values(
+        by=[*grouping_columns, selection_column], ascending=False)
     df = df.drop_duplicates(subset=grouping_columns,
                             keep='first')
     return df
@@ -226,7 +237,8 @@ def interpolate(wide_df: pd.DataFrame, name='interpolated') -> pd.DataFrame:
     ret.iloc[0] = first_row
     ret.iloc[-1] = last_row
 
-    ret = ret[mask].stack().dropna().squeeze() # does not work with MultiIndex columns
+    # does not work with MultiIndex columns
+    ret = ret[mask].stack().dropna().squeeze()
     ret.rename(name, inplace=True)
     return ret
 
@@ -331,8 +343,8 @@ def length(x):
 
 
 def get_last_index_matching_proportion(df_counts: pd.DataFrame,
-                                       prop:float=0.25,
-                                       prop_col:str='proportion') -> object:
+                                       prop: float = 0.25,
+                                       prop_col: str = 'proportion') -> object:
     """df_counts needs to be sorted by "prop_col" (descending).
 
     Parameters
@@ -357,6 +369,7 @@ def get_last_index_matching_proportion(df_counts: pd.DataFrame,
 
 
 def get_overlapping_columns(df: pd.DataFrame, cols_expected: list) -> list:
+    """Get overlapping columns between DataFrame and list of expected columns."""
     ret = df.columns.intersection(cols_expected)
     diff = pd.Index(cols_expected).difference(df.columns)
     if not diff.empty:

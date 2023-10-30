@@ -43,7 +43,7 @@ def compare_km_curves(
         Axes object,
         KaplanMeierFitter for predited as 0,
         KaplanMeierFitter for predicted as 1
-        
+
     """
     pred = pred.astype(bool)
     mask = ~pred
@@ -56,10 +56,10 @@ def compare_km_curves(
     kmf_1 = KaplanMeierFitter()
     kmf_1.fit(time.loc[mask], event_observed=y.loc[mask])
     ax = kmf_1.plot(xlim=xlim,
-                  ylim=ylim,
-                  xlabel=xlabel,
-                  ylabel=ylabel,
-                  legend=False)
+                    ylim=ylim,
+                    xlabel=xlabel,
+                    ylabel=ylabel,
+                    legend=False)
     if add_risk_counts:
         from lifelines.plotting import add_at_risk_counts
         add_at_risk_counts(kmf_0, kmf_1, ax=ax)

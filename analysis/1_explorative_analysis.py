@@ -49,9 +49,12 @@ CLINIC = config.fname_pkl_prodoc_clinic
 OLINK = config.fname_pkl_prodoc_olink
 val_ids: str = ''  # List of comma separated values or filepath
 #
-clinic_cont = config.clinic_data.vars_cont  # list or string of csv, eg. "var1,var2"
-clinic_binary = config.clinic_data.vars_binary  # list or string of csv, eg. "var1,var2"
-da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol'  # List of comma separated values or filepath
+# list or string of csv, eg. "var1,var2"
+clinic_cont = config.clinic_data.vars_cont
+# list or string of csv, eg. "var1,var2"
+clinic_binary = config.clinic_data.vars_binary
+# List of comma separated values or filepath
+da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol'
 
 # %%
 # TARGET = 'dead180infl'
@@ -260,7 +263,14 @@ writer.close()
 
 # %% [markdown]
 # # KM plot for top marker
-# Direction of cutoff cannot be directly inferred from cutoff
+# Cutoff is defined using a univariate logistic regression
+#
+#
+# $$ ln \frac{p}{1-p} = \beta_0 + \beta_1 \cdot x $$
+# the default cutoff `p=0.5` corresponds to a feature value of:
+# $$ x = - \frac{\beta_0}{\beta_1} $$
+#
+# Optional: The cutoff could be adapted to the prevalence of the target.
 
 # %%
 rejected = ana_diff_olink.query("`('ancova', 'rejected')` == True")
@@ -281,7 +291,7 @@ log_rank_test = partial(
     time=time_km,
     y=y_km,
 )
-TOP_N = None # None = all
+TOP_N = None  # None = all
 # %%
 for marker in rejected.index[:TOP_N]:  # first case done above currently
     fig, ax = plt.subplots()
@@ -289,7 +299,8 @@ for marker in rejected.index[:TOP_N]:  # first case done above currently
     # class_weight=None
     model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
     model = model.fit(X=olink[marker].to_frame(), y=happend)
-    print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+    print(
+        f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
     cutoff = -float(model.intercept_) / float(model.coef_)
     direction = '>' if model.coef_ > 0 else '<'
     print(
@@ -361,9 +372,10 @@ fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
 
 # %%
-ax = seaborn.scatterplot(x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
+ax = seaborn.scatterplot(
+    x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
 fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')
 
 # %%
-#umap
+# umap
