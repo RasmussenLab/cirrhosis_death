@@ -58,7 +58,7 @@ vars_binary_created = [
     'EtiNonAlco',
     # only encoded:
     # 'LiverRelated1admFromInclu',
-    'HeartDiseaseTotal', # encoded
+    'HeartDiseaseTotal',  # encoded
 ]
 
 # HbA1c # laboratory marker?
@@ -75,13 +75,13 @@ vars_cont = [
     'Hgb',
     'Leucocytes',
     'Platelets',
-    'Bilirubin', # part of MELD
+    'Bilirubin',  # part of MELD
     'Albumin',
     'CRP',
     # 'pp', # should be the same as INR
-    'INR', # part of MELD
+    'INR',  # part of MELD
     'ALAT',
-    'Creatinine', # used as measure of kidney function, part of MELD 
+    'Creatinine',  # used as measure of kidney function, part of MELD
     # # Intervals
     # 'DaysToDeath',
     # 'DaysToAdmFromDiagnose',

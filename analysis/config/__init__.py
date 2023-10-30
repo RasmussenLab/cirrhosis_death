@@ -1,6 +1,9 @@
-import config.pandas
-
 from pathlib import Path
+
+from . import olink
+from . import clinic_data
+import config.pandas  # noqa: F401 # Sets formatting of pandas dataframes
+
 
 STUDY_ENDDATE: str = '2022-09-09'
 MAX_DAYS_INTERVAL: int = 730
@@ -23,14 +26,11 @@ fname_pkl_targets = data_processed / 'targets.pkl'
 
 fname_pkl_cirkaflow_olink = data_processed / 'cirkaflow_olink_all.pkl'
 fname_pkl_cirkaflow_clinic = data_processed / 'cirkaflow_clinic_all.pkl'
-fname_pkl_cirkaflow_clinic_num =  data_processed / 'cirkaflow_clinic_all_numeric.pkl'
+fname_pkl_cirkaflow_clinic_num = data_processed / 'cirkaflow_clinic_all_numeric.pkl'
 
 fname_pkl_all_clinic_num = data_processed / 'all_clinic_num.pkl'
 fname_pkl_all_olink = data_processed / 'all_olink.pkl'
 
-from . import clinic_data
-from . import olink
-from . import cirkaflow_data
 
 TARGETS = [
     # 'dead090infl',
@@ -53,7 +53,6 @@ TRAIN_LABEL = 'study group'
 TEST_LABEL = 'validation cohort'
 
 
-
 Y_KM = {
     'dead180infl': ('DaysToDeathFromInfl', 'dead'),
     'hasLiverAdm180': ('DaysToAdmFromInflSample', 'hasLiverAdm180'),
@@ -66,7 +65,7 @@ feat_sets = {
     'CLINIC': ','.join(clinic_data.clinical_feat)
 }
 feat_sets['OLINK_AND_CLINIC'] = ','.join(feat_sets.values())
-feat_sets['OLINK_AND_SCORES'] =  ','.join(olink.inflammation_panel + clinic_data.scores)
+feat_sets['OLINK_AND_SCORES'] = ','.join(olink.inflammation_panel + clinic_data.scores)
 feat_sets['SCORES_ONLY'] = ','.join(clinic_data.scores)
 
 MODEL_NAMES = {

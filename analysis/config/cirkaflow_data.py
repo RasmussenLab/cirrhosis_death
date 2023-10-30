@@ -25,7 +25,7 @@ rename_dict = {
     'BMI': 'BMI',
     'Sex': 'Sex',
     'Ascites': 'Ascites',
-    'Decompensation': 'DecompensationAtIncl', # DecompensationAtInclusion
+    'Decompensation': 'DecompensationAtIncl',  # DecompensationAtInclusion
     'EsoBleeding': 'EsoBleeding',
     'HE': 'HE',
     'HRS': 'HRS',
@@ -51,7 +51,7 @@ rename_dict = {
     'neutrocyt': 'neutrocyt',
     'monocyt': 'monocyt',
     'lymfocyt': 'lymfocyt',
-    'trombocyt': 'Platelets', 
+    'trombocyt': 'Platelets',
     'albumin': 'Albumin',
     'Sodium': 'Sodium',
     'Potassium': 'Potassium',
@@ -79,7 +79,7 @@ rename_dict = {
     '90days': '90days',
     '180days': '180days',
     'AdmittetBlood': 'AdmittetBlood',
-    'DateFirstAdmission': 'DateFirstAdmission', # 'DateAdm',
+    'DateFirstAdmission': 'DateFirstAdmission',  # 'DateAdm',
     'Cause': 'Cause',
     'TimeToAdm': 'TimeToAdm',
     'Adm180': 'Adm180',
