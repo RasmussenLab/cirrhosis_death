@@ -817,7 +817,7 @@ if M_sel > 1:
     max_rows = min(3, len(results_model.selected_features))
     fig, axes = plt.subplots(max_rows, 2,
                              figsize=(8.3, 11.7),
-                             sharex=True, sharey=True,
+                             sharex=False, sharey=False,
                              layout='constrained')
 
     for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
