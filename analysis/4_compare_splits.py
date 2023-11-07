@@ -18,17 +18,33 @@
 # - compare two data splits by a binary target variable
 
 # %%
+import logging
 from pathlib import Path
 import pandas as pd
 import sweetviz
 
-import src
 
 import config
 
+
+def find_val_ids(df: pd.DataFrame, val_ids: str = None, val_ids_query: str = None, sep=',') -> list:
+    """Find validation IDs based on query or split."""
+    if not val_ids:
+        if val_ids_query:
+            logging.warning(f"Querying index using: {val_ids_query}")
+            val_ids = df.filter(like='Cflow', axis=0).index.to_list()
+            logging.warning(f"Found {len(val_ids)} Test-IDs")
+        else:
+            raise ValueError("Provide a query string.")
+    elif isinstance(val_ids, str):
+        val_ids = val_ids.split(sep)
+    else:
+        raise ValueError("Provide IDs in csv format as str: 'ID1,ID2'")
+    return val_ids
+
+
 # %% [markdown]
 # ## Parameters
-
 # %% tags=["parameters"]
 fname_pkl_clinic = config.fname_pkl_all_clinic_num
 fname_pkl_olink = config.fname_pkl_all_olink
@@ -55,10 +71,10 @@ FOLDER
 data = pd.read_pickle(fname_pkl_clinic).join(pd.read_pickle(fname_pkl_olink))
 data
 
-# cols = src.pandas.get_colums_accessor(clinic)
+# cols = njab.pandas.get_colums_accessor(clinic)
 
 # %%
-test_ids = src.find_val_ids(data, val_ids=VAL_IDS, val_ids_query=VAL_IDS_query)
+test_ids = find_val_ids(data, val_ids=VAL_IDS, val_ids_query=VAL_IDS_query)
 # val_ids
 
 # %% [markdown]

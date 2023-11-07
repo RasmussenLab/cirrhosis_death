@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Olink validation data
 #
-# both for 
+# both for
 #
 # - `ProDoc` (N=29) samples
 # - `CircaFlow` samples
@@ -34,10 +34,10 @@ DATA_FOLDER
 # ## Parameters
 
 # %% tags=["parameters"]
-OLINK:str = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
-METADATA:str = DATA_FOLDER / "Validation Results" / "metadata.tsv"
-ID_MAP:str = DATA_FOLDER / "Validation Results" / "id.xlsx"
-OLINK_UPDATE:str = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
+OLINK: str = DATA_FOLDER / "Validation Results" / "ProDoc_Olink_bridged_QC_long.tsv"
+METADATA: str = DATA_FOLDER / "Validation Results" / "metadata.tsv"
+ID_MAP: str = DATA_FOLDER / "Validation Results" / "id.xlsx"
+OLINK_UPDATE: str = DATA_FOLDER / "Validation Results" / "update_olink_221204.tsv"
 
 # %% [markdown]
 # ## Set default paths and collection
@@ -162,7 +162,7 @@ olink_cflow.to_excel(outputs[stem])
 olink_cflow.to_pickle(outputs[stem].with_suffix('.pkl'))
 
 # %% [markdown]
-# Log all input and selected output files 
+# Log all input and selected output files
 
 # %%
 inputs

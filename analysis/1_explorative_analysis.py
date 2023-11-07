@@ -31,8 +31,8 @@ from lifelines.plotting import add_at_risk_counts
 import matplotlib.pyplot as plt
 import seaborn
 
-import src
-from src.plotting.km import compare_km_curves, log_rank_test
+from IPython.display import display
+from njab.plotting.km import compare_km_curves, log_rank_test
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
 
@@ -77,14 +77,14 @@ FOLDER
 
 # %%
 clinic = pd.read_pickle(CLINIC)
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
 # %%
 # pd.crosstab(clinic.DiagnosisPlace, clinic[TARGET], margins=True)
 
 # %%
-check_isin_clinic = partial(src.pandas.col_isin_df, df=clinic)
+check_isin_clinic = partial(njab.pandas.col_isin_df, df=clinic)
 covar = check_isin_clinic(da_covar)
 covar
 
@@ -310,7 +310,8 @@ for marker in rejected.index[:TOP_N]:  # first case done above currently
     ax, kmf_0, kmf_1 = compare_km_curves(pred=pred)
     res = log_rank_test(mask=pred)
     ax.set_title(
-        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
+        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker}'
+        f' \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
     )
     ax.legend([
         f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',

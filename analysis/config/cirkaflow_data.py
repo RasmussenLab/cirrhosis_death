@@ -2,6 +2,7 @@
 # - 'IgM', 'IgG', 'IgA'
 # - 'Icterus', 'SBP', 'Cancer', 'Depression', 'Psychiatric'
 
+# %%
 rename_dict = {
     'SampleID': 'SampleID',
     'Label: ': 'ID',
@@ -9,7 +10,10 @@ rename_dict = {
     'DateInflSample': 'DateInflSample',
     'Age': 'Age',
     'Healthy': 'Healthy',
-    'cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH, 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri': 'cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH, 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri',
+    ('cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH,'
+     '5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri'):
+    ('cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH,'
+     ' 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri'),
     'EtiAlco': 'EtiAlco',
     'EtiFat': 'EtiFat',
     'EtiHBV': 'EtiHBV',
@@ -29,13 +33,15 @@ rename_dict = {
     'EsoBleeding': 'EsoBleeding',
     'HE': 'HE',
     'HRS': 'HRS',
-    'Alcohol (0=no overuse, 1=former overuse, 2= ongoing overuse, 3=episodically)': 'Alcohol (0=no overuse, 1=former overuse, 2= ongoing overuse, 3=episodically)',
+    'Alcohol (0=no overuse, 1=former overuse, 2= ongoing overuse, 3=episodically)':
+    'Alcohol (0=no overuse, 1=former overuse, 2= ongoing overuse, 3=episodically)',
     'Items pr. week (ongoing)': 'Items pr. week (ongoing)',
     'Hypertension': 'Hypertension',
     'Diabetes': 'Diabetes',
     'InsulinDependent': 'InsulinDependent',
     'HeartDisease': 'HeartDisease',
-    'Hyperkolesterolæmi kolesterol >5 (0=nej, 1=ja 2 = simvastatin)': 'Hyperkolesterolæmi kolesterol >5 (0=nej, 1=ja 2 = simvastatin)',
+    'Hyperkolesterolæmi kolesterol >5 (0=nej, 1=ja 2 = simvastatin)':
+    'Hyperkolesterolæmi kolesterol >5 (0=nej, 1=ja 2 = simvastatin)',
     'HighCholesterol': 'HighCholesterol',
     'HVPG': 'HVPG',
     'NonselectBetaBlock': 'NonselectBetaBlock',
@@ -93,3 +99,5 @@ rename_dict = {
     'is "Yes" if admitted during inflammation sample': 'is "Yes" if admitted during inflammation sample',
     'Leuko': 'Leuko'
 }
+
+# %%

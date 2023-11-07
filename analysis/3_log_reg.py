@@ -24,11 +24,11 @@ import numpy as np
 import pandas as pd
 
 import plotly.express as px
-import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
 from heatmap import corrplot
 import umap
+from IPython.display import display
 
 import sklearn
 import sklearn.impute
@@ -43,7 +43,6 @@ from njab.sklearn.types import Splits
 from njab.plotting.metrics import plot_auc, plot_prc
 from njab.sklearn.scoring import get_score, get_pred, get_target_count_per_bin
 
-import src
 
 import config
 
@@ -90,7 +89,7 @@ FOLDER = ''
 
 # %%
 clinic = pd.read_pickle(CLINIC)
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
 
@@ -100,7 +99,7 @@ olink.shape, clinic.shape
 # %% [markdown]
 # ## Target
 # %%
-src.pandas.value_counts_with_margins(clinic[TARGET])
+njab.pandas.value_counts_with_margins(clinic[TARGET])
 
 # %%
 target_counts = clinic[TARGET].value_counts()
@@ -506,24 +505,24 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 pred_train = get_pred(
     clf=results_model.model,
     X=splits.X_train[results_model.selected_features]).astype(bool)
-ax, _, _ = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
-                                                          "DaysToDeathFromInfl"],
-                                          y=y[pred_train.index],
-                                          pred=pred_train,
-                                          xlabel='Days since inflammation sample',
-                                          ylabel=f'rate {y.name}')
+ax, _, _ = njab.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
+                                                           "DaysToDeathFromInfl"],
+                                           y=y[pred_train.index],
+                                           pred=pred_train,
+                                           xlabel='Days since inflammation sample',
+                                           ylabel=f'rate {y.name}')
 
-res = src.plotting.km.log_rank_test(time=clinic.loc[pred_train.index,
-                                                    "DaysToDeathFromInfl"],
-                                    y=y[pred_train.index],
-                                    mask=pred_train)
+res = njab.plotting.km.log_rank_test(time=clinic.loc[pred_train.index,
+                                                     "DaysToDeathFromInfl"],
+                                     y=y[pred_train.index],
+                                     mask=pred_train)
 ax.set_title(
     f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
 ])
-fname = FOLDER / f'KM_plot_model_train.pdf'
+fname = FOLDER / 'KM_plot_model_train.pdf'
 files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
@@ -559,7 +558,7 @@ _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe()
 _.columns = pd.MultiIndex.from_tuples([
     (t[0] + f" - {cutoff:.3f}", t[1]) for t in _.columns
 ])
-_.to_excel(writer, f"CM_test_cutoff_adapted")
+_.to_excel(writer, "CM_test_cutoff_adapted")
 _
 
 # %%
@@ -578,24 +577,24 @@ _
 # ! km plot
 y_pred_val = y_pred_val.astype(bool)
 
-ax, _, _ = src.plotting.compare_km_curves(
+ax, _, _ = njab.plotting.compare_km_curves(
     time=clinic.loc[y_pred_val.index, "DaysToDeathFromInfl"],
     y=y_val[y_pred_val.index],
     pred=y_pred_val,
     xlabel='Days since inflammation sample',
     ylabel=f'rate {y.name}')
 
-res = src.plotting.km.log_rank_test(time=clinic.loc[y_pred_val.index,
-                                                    "DaysToDeathFromInfl"],
-                                    y=y_val[y_pred_val.index],
-                                    mask=y_pred_val)
+res = njab.plotting.km.log_rank_test(time=clinic.loc[y_pred_val.index,
+                                                     "DaysToDeathFromInfl"],
+                                     y=y_val[y_pred_val.index],
+                                     mask=y_pred_val)
 ax.set_title(
     f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
 ax.legend([
     f"KP pred=0 (N={(~y_pred_val).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={y_pred_val.sum()})", '95% CI (pred=1)'
 ])
-fname = FOLDER / f'KM_plot_model_val.pdf'
+fname = FOLDER / 'KM_plot_model_val.pdf'
 files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
