@@ -16,21 +16,20 @@
 # # Outliers in clinic data
 #
 # - base outlier detection on interquartile range (IQR) for continuous features
-#   - set fraction for deviation from IQR wrt. to 1st and 3rd quartile 
+#   - set fraction for deviation from IQR wrt. to 1st and 3rd quartile
 # - collect sample IDs with ouliers and respective values
 # - join into new data view and dump to disk
 
 # %%
-import numpy as np
 import pandas as pd
 
-import src
-
 import config
+import njab
+from IPython.display import display
 
 # %%
 clinic = pd.read_pickle(config.fname_pkl_clinic).reset_index()
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 clinic = clinic.set_index(cols_clinic.Study_ID)
 
 

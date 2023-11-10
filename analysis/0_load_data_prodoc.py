@@ -28,6 +28,7 @@
 # all cases within 90 days will be included into the 180 days, from `incl`usion and from `infl`ammation sample time.
 
 # %%
+from njab.pandas import combine_value_counts
 import datetime
 from pathlib import Path
 
@@ -42,7 +43,6 @@ from lifelines import KaplanMeierFitter
 
 import njab.plotting
 from njab.plotting import savefig
-import src
 
 import config
 
@@ -61,9 +61,9 @@ config.STUDY_ENDDATE
 # ## Parameters
 
 # %% tags=["parameters"]
-DATA_CLINIC:str = DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx'
-DATA_OLINK:str = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
-DATA_OLINK_VAL:str = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
+DATA_CLINIC: str = DATA_FOLDER / 'DataSheet - fewer variables_2022-12-12.xlsx'
+DATA_OLINK: str = DATA_FOLDER / 'QC_OlinkProD_wide.tsv'
+DATA_OLINK_VAL: str = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
 
 # %% [markdown]
 # Load clinical data
@@ -71,18 +71,18 @@ DATA_OLINK_VAL:str = DATA_PROCESSED / 'olink_prodoc_val.xlsx'
 # %%
 clinic = pd.read_excel(DATA_CLINIC)
 clinic.SampleID = clinic.SampleID.str.replace(' ', '')
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 clinic = clinic.set_index('SampleID').sort_index()
 
 # %%
 # clinic
 clinic.describe(datetime_is_numeric=True, include='all')
-clinic.columns = clinic.columns.str.strip() # strip whitespace in column names
+clinic.columns = clinic.columns.str.strip()  # strip whitespace in column names
 
 # %%
 olink = pd.read_table(DATA_OLINK)
 olink = olink.set_index(olink.SampleID.str[4:]).sort_index()
-cols_olink = src.pandas.get_colums_accessor(olink)
+cols_olink = njab.pandas.get_colums_accessor(olink)
 
 # %%
 # olink
@@ -109,9 +109,9 @@ din_a4 = (8.27 * 2, 11.69 * 2)
 njab.plotting.make_large_descriptors(32)
 fig, ax = plt.subplots(figsize=din_a4)
 
-src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'),
-                            start_col='DateInflSample',
-                            ax=ax)
+njab.plotting.plot_lifelines(clinic.sort_values('DateInflSample'),
+                             start_col='DateInflSample',
+                             ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 njab.plotting.set_font_sizes('x-small')
@@ -176,8 +176,8 @@ _ = ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-            'k-',
-            lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -187,8 +187,8 @@ ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-        'k-',
-        lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -198,8 +198,8 @@ ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-        'k-',
-        lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -322,7 +322,7 @@ clinic["DaysToDeathFromInfl"] = (
     clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInflSample"]).dt.days
 
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 
 cols_view = [
     cols_clinic.DaysToDeathFromInfl,
@@ -352,7 +352,7 @@ X_LIMIT = config.MAX_DAYS_INTERVAL
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
+ax = kmf.plot(  # title='Kaplan Meier survival curve since inclusion',
     xlim=(0, X_LIMIT),
     ylim=y_lim,
     xlabel='Days since inflammation sample',
@@ -403,7 +403,7 @@ kmf.fit(clinic.loc[mask, "DaysToAdmFromInflSample"],
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(  #title='Kaplan Meier curve for liver related admissions',
+ax = kmf.plot(  # title='Kaplan Meier curve for liver related admissions',
     xlim=(0, 180),
     ylim=(0, 1),
     xlabel='Days since inflammation sample',
@@ -452,7 +452,7 @@ clinic.loc[to_exclude]
 # %%
 for col_adm, col_death in zip(
     ['Adm180', 'Adm90', 'LiverAdm90', 'LiverAdm180'],
-    ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
+        ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
     clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude,
                                                   col_adm].fillna(0)
     clinic.loc[to_exclude, col_adm] = np.nan
@@ -468,7 +468,6 @@ targets = targets.sort_index(axis=1, ascending=False)
 targets.describe()
 
 # %%
-from src.pandas import combine_value_counts
 
 combine_value_counts(targets)
 
@@ -596,7 +595,8 @@ clinic[cols_cat].describe()
 
 # %% [markdown]
 # The martial status was made into three dummy variables before (see above):
-# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship, MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
+# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship,
+#  MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
 
 # %%
 mask = clinic.dtypes == 'object'
@@ -628,4 +628,4 @@ clinic[numeric_cols].drop(to_drop,
 # # Files saved by notebook
 
 # %%
-src.io.print_files(files_out)
+njab.io.print_files(files_out)

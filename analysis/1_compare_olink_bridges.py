@@ -17,22 +17,15 @@
 # # Explorative Analysis
 
 # %%
-from functools import partial
 from pathlib import Path
-import logging
 
 import numpy as np
 import pandas as pd
 
-import pingouin as pg
 import seaborn
-import sklearn
-from sklearn.metrics import precision_recall_curve, roc_curve
 
-import src
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
-from njab.sklearn.scoring import ConfusionMatrix
 
 import config
 import njab

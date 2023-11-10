@@ -24,11 +24,11 @@ import numpy as np
 import pandas as pd
 
 import plotly.express as px
-import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn
 from heatmap import corrplot
 import umap
+from IPython.display import display
 
 import sklearn
 import sklearn.impute
@@ -43,7 +43,6 @@ from njab.sklearn.types import Splits
 from njab.plotting.metrics import plot_auc, plot_prc
 from njab.sklearn.scoring import get_score, get_pred, get_target_count_per_bin
 
-import src
 
 import config
 
@@ -57,8 +56,10 @@ logger.setLevel(logging.INFO)
 # - [ ] allow feature selection based on requested variables
 
 # %% tags=["parameters"]
-CLINIC: Path = config.fname_pkl_all_clinic_num  # clinic numeric pickled, can contain missing
-OLINK: Path = config.fname_pkl_all_olink  # olink numeric pickled, can contain missing
+# clinic numeric pickled, can contain missing
+CLINIC: Path = config.fname_pkl_all_clinic_num
+# olink numeric pickled, can contain missing
+OLINK: Path = config.fname_pkl_all_olink
 TARGET: str = 'dead180infl'  # target column in CLINIC data
 feat_set_to_consider: str = 'OLINK_AND_CLINIC'
 n_features_max: int = 15
@@ -88,7 +89,7 @@ FOLDER = ''
 
 # %%
 clinic = pd.read_pickle(CLINIC)
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
 
@@ -98,7 +99,7 @@ olink.shape, clinic.shape
 # %% [markdown]
 # ## Target
 # %%
-src.pandas.value_counts_with_margins(clinic[TARGET])
+njab.pandas.value_counts_with_margins(clinic[TARGET])
 
 # %%
 target_counts = clinic[TARGET].value_counts()
@@ -313,7 +314,8 @@ splits = Splits(X_train=X_scaled,
 #                 X_test=X_val,
 #                 y_train=y, y_test=y_val)
 
-model = sklearn.linear_model.LogisticRegression(penalty='l2', class_weight=weights)
+model = sklearn.linear_model.LogisticRegression(
+    penalty='l2', class_weight=weights)
 
 # %%
 scoring = [
@@ -392,7 +394,7 @@ results_model = njab.sklearn.run_model(
     n_feat_to_select=n_feat_best.loc['test_roc_auc', 'mean'],
     # n_feat_to_select=n_feat_best.loc['test_neg_AIC', 'mean'],
     # n_feat_to_select=int(n_feat_best.mode()),
-    #fit_params=dict(sample_weight=weights)
+    # fit_params=dict(sample_weight=weights)
 )
 
 results_model.name = model_name
@@ -472,7 +474,8 @@ pred_bins = get_target_count_per_bin(score, y, n_bins=N_BINS)
 ax = pred_bins.plot(kind='bar', ylabel='count')
 files_out[
     'hist_score_train_target.pdf'] = FOLDER / 'hist_score_train_target.pdf'
-njab.plotting.savefig(ax.get_figure(), files_out['hist_score_train_target.pdf'])
+njab.plotting.savefig(
+    ax.get_figure(), files_out['hist_score_train_target.pdf'])
 # pred_bins
 
 # %% [markdown]
@@ -502,23 +505,24 @@ njab.plotting.savefig(ax.get_figure(), files_out['hist_score_test_target.pdf'])
 pred_train = get_pred(
     clf=results_model.model,
     X=splits.X_train[results_model.selected_features]).astype(bool)
-ax, _, _ = src.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
-                                                    "DaysToDeathFromInfl"],
-                                    y=y[pred_train.index],
-                                    pred=pred_train,
-                                    xlabel='Days since inflammation sample',
-                                    ylabel=f'rate {y.name}')
+ax, _, _ = njab.plotting.compare_km_curves(time=clinic.loc[pred_train.index,
+                                                           "DaysToDeathFromInfl"],
+                                           y=y[pred_train.index],
+                                           pred=pred_train,
+                                           xlabel='Days since inflammation sample',
+                                           ylabel=f'rate {y.name}')
 
-res = src.plotting.km.log_rank_test(time=clinic.loc[pred_train.index,
-                                                    "DaysToDeathFromInfl"],
-                                    y=y[pred_train.index],
-                                    mask=pred_train)
-ax.set_title(f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
+res = njab.plotting.km.log_rank_test(time=clinic.loc[pred_train.index,
+                                                     "DaysToDeathFromInfl"],
+                                     y=y[pred_train.index],
+                                     mask=pred_train)
+ax.set_title(
+    f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
 ax.legend([
     f"KP pred=0 (N={(~pred_train).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={pred_train.sum()})", '95% CI (pred=1)'
 ])
-fname = FOLDER / f'KM_plot_model_train.pdf'
+fname = FOLDER / 'KM_plot_model_train.pdf'
 files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
@@ -554,7 +558,7 @@ _ = ConfusionMatrix(y_val, y_pred_val).as_dataframe()
 _.columns = pd.MultiIndex.from_tuples([
     (t[0] + f" - {cutoff:.3f}", t[1]) for t in _.columns
 ])
-_.to_excel(writer, f"CM_test_cutoff_adapted")
+_.to_excel(writer, "CM_test_cutoff_adapted")
 _
 
 # %%
@@ -573,30 +577,39 @@ _
 # ! km plot
 y_pred_val = y_pred_val.astype(bool)
 
-ax, _, _ = src.plotting.compare_km_curves(
+ax, _, _ = njab.plotting.compare_km_curves(
     time=clinic.loc[y_pred_val.index, "DaysToDeathFromInfl"],
     y=y_val[y_pred_val.index],
     pred=y_pred_val,
     xlabel='Days since inflammation sample',
     ylabel=f'rate {y.name}')
 
-res = src.plotting.km.log_rank_test(time=clinic.loc[y_pred_val.index,
-                                                    "DaysToDeathFromInfl"],
-                                    y=y_val[y_pred_val.index],
-                                    mask=y_pred_val)
-ax.set_title(f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
+res = njab.plotting.km.log_rank_test(time=clinic.loc[y_pred_val.index,
+                                                     "DaysToDeathFromInfl"],
+                                     y=y_val[y_pred_val.index],
+                                     mask=y_pred_val)
+ax.set_title(
+    f'KM curve for LR based on {model_name.lower()}\n (log-rank-test p={res.p_value:.3f})')
 ax.legend([
     f"KP pred=0 (N={(~y_pred_val).sum()})", '95% CI (pred=0)',
     f"KP pred=1 (N={y_pred_val.sum()})", '95% CI (pred=1)'
 ])
-fname = FOLDER / f'KM_plot_model_val.pdf'
+fname = FOLDER / 'KM_plot_model_val.pdf'
 files_out[fname.name] = fname
 njab.plotting.savefig(ax.get_figure(), fname)
 
 # %% [markdown]
 # # Multiplicative decompositon
+# logarithmic transformation of the linear model
+# $$ \ln\left(\frac{p}{1-p} \right) = \beta_0 + \beta_1 x_1 + \dots + \beta_M x_M $$
+# Score in terms of multiplicative compentents (which is dumped to excel)
+# $$ \frac{p}{1-p} = \exp(\beta_0) \cdot \exp(\beta_1 x_1) * \dots * \exp(\beta_M x_M) = score $$
+# Going from score to probability:
+# $$ p = \frac{score}{1+score} $$
 
 # %%
+
+
 def get_lr_multiplicative_decomposition(results, X, score, y):
     components = X[results.selected_features].multiply(results.model.coef_)
     components['intercept'] = float(results.model.intercept_)
@@ -637,8 +650,8 @@ pivot.describe().iloc[:2]
 
 # %%
 pivot_dead_by_pred_and_target = pivot.groupby(['pred', TARGET_LABEL
-                                              ]).agg({'dead': ['count', 'sum']
-                                                     })  # more detailed
+                                               ]).agg({'dead': ['count', 'sum']
+                                                       })  # more detailed
 pivot_dead_by_pred_and_target.to_excel(writer, 'pivot_dead_by_pred_and_target')
 
 
@@ -652,15 +665,16 @@ reducer = umap.UMAP(random_state=42)
 # make sure to have two or more features?
 M_sel = len(results_model.selected_features)
 if M_sel > 1:
-    embedding = reducer.fit_transform(X_scaled[results_model.selected_features])
+    embedding = reducer.fit_transform(
+        X_scaled[results_model.selected_features])
 
     embedding = pd.DataFrame(embedding,
-                            index=X_scaled.index,
-                            columns=['UMAP dimension 1', 'UMAP dimension 2'
-                                    ]).join(y.astype('category'))
+                             index=X_scaled.index,
+                             columns=['UMAP dimension 1', 'UMAP dimension 2'
+                                      ]).join(y.astype('category'))
     display(embedding.head(3))
 else:
-    embedding=None
+    embedding = None
 
 # %%
 predictions['DaysToDeathFromInfl'] = clinic['DaysToDeathFromInfl']
@@ -676,8 +690,8 @@ X_val_scaled = scaler.transform(X_val)
 if embedding is not None:
     embedding_val = pd.DataFrame(reducer.transform(
         X_val_scaled[results_model.selected_features]),
-                                index=X_val_scaled.index,
-                                columns=['UMAP dimension 1', 'UMAP dimension 2'])
+        index=X_val_scaled.index,
+        columns=['UMAP dimension 1', 'UMAP dimension 2'])
     embedding_val.sample(3)
 
 # %%
@@ -705,8 +719,9 @@ colors
 if embedding is not None:
     fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
     for _embedding, ax, _title, _model_pred_label in zip(
-        [embedding, embedding_val], axes, [config.TRAIN_LABEL, config.TEST_LABEL],
-        [pred_train['label'], predictions['label']]):
+        [embedding, embedding_val], axes, [
+            config.TRAIN_LABEL, config.TEST_LABEL],
+            [pred_train['label'], predictions['label']]):
         ax = seaborn.scatterplot(
             x=_embedding.iloc[:, 0],
             y=_embedding.iloc[:, 1],
@@ -742,12 +757,12 @@ if embedding is not None:
     defaults = dict(width=1600, height=700, template=TEMPLATE)
 
     fig = px.scatter(combined_embeddings.round(3).reset_index(),
-                    x=cols[0],
-                    y=cols[1],
-                    color='label',
-                    facet_col='group',
-                    hover_data=['ID'] + results_model.selected_features,
-                    **defaults)
+                     x=cols[0],
+                     y=cols[1],
+                     color='label',
+                     facet_col='group',
+                     hover_data=['ID'] + results_model.selected_features,
+                     **defaults)
     fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[1]))
 
     fname = FOLDER / 'umap_sel_feat.html'
@@ -759,7 +774,8 @@ if embedding is not None:
 # ## PCA
 
 # %%
-PCs_train, pca = njab_pca.run_pca(X_scaled[results_model.selected_features], n_components=None)
+PCs_train, pca = njab_pca.run_pca(
+    X_scaled[results_model.selected_features], n_components=None)
 ax = njab_pca.plot_explained_variance(pca)
 ax.locator_params(axis='x', integer=True)
 
@@ -769,7 +785,8 @@ njab.plotting.savefig(ax.get_figure(), fname)
 
 # %%
 PCs_val = pca.transform(X_val_scaled[results_model.selected_features])
-PCs_val = pd.DataFrame(PCs_val, index=X_val_scaled.index, columns=PCs_train.columns)
+PCs_val = pd.DataFrame(PCs_val, index=X_val_scaled.index,
+                       columns=PCs_train.columns)
 PCs_val
 
 # %%
@@ -779,7 +796,7 @@ if M_sel > 1:
         [PCs_train, PCs_val],
         axes,
         [config.TRAIN_LABEL, config.TEST_LABEL],
-        [pred_train['label'], predictions['label']]):
+            [pred_train['label'], predictions['label']]):
         ax = seaborn.scatterplot(
             x=_embedding.iloc[:, 0],
             y=_embedding.iloc[:, 1],
@@ -798,14 +815,14 @@ if M_sel > 1:
 if M_sel > 1:
     max_rows = min(3, len(results_model.selected_features))
     fig, axes = plt.subplots(max_rows, 2,
-                            figsize=(8.3, 11.7),
-                            sharex=True, sharey=True,
-                            layout='constrained')
+                             figsize=(8.3, 11.7),
+                             sharex=False, sharey=False,
+                             layout='constrained')
 
     for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
         [PCs_train, PCs_val],
         [config.TRAIN_LABEL, config.TEST_LABEL],
-        [pred_train['label'], predictions['label']])):
+            [pred_train['label'], predictions['label']])):
         _row = 0
         axes[_row, axes_col].set_title(_title)
         for (i, j) in itertools.combinations(range(max_rows), 2):
@@ -832,16 +849,16 @@ if M_sel > 1:
 if M_sel > 1:
     max_rows = min(3, len(results_model.selected_features))
     fig, axes = plt.subplots(max_rows, 2,
-                            figsize=(8.3, 11.7),
-                            sharex = False,
-                            sharey = False,
-                            layout='constrained')
+                             figsize=(8.3, 11.7),
+                             sharex=False,
+                             sharey=False,
+                             layout='constrained')
 
     for axes_col, (_embedding, _title, _model_pred_label) in enumerate(zip(
         [X_scaled[results_model.selected_features],
-        X_val_scaled[results_model.selected_features]],
+         X_val_scaled[results_model.selected_features]],
         [config.TRAIN_LABEL, config.TEST_LABEL],
-        [pred_train['label'], predictions['label']])):
+            [pred_train['label'], predictions['label']])):
         _row = 0
         axes[_row, axes_col].set_title(_title)
         for (i, j) in itertools.combinations(range(max_rows), 2):
@@ -862,13 +879,15 @@ if M_sel > 1:
     njab.plotting.savefig(ax.get_figure(), fname)
 else:
     fig, axes = plt.subplots(1, 1,
-                        figsize=(6, 2),
-                        layout='constrained'
-                        )
+                             figsize=(6, 2),
+                             layout='constrained'
+                             )
     single_feature = results_model.selected_features[0]
     data = pd.concat([
-        X[single_feature].to_frame().join(pred_train['label']).assign(group=config.TRAIN_LABEL),
-        X_val[single_feature].to_frame().join(predictions['label']).assign(group=config.TEST_LABEL)
+        X[single_feature].to_frame().join(
+            pred_train['label']).assign(group=config.TRAIN_LABEL),
+        X_val[single_feature].to_frame().join(
+            predictions['label']).assign(group=config.TEST_LABEL)
     ])
     ax = seaborn.swarmplot(data=data,
                            x='group',

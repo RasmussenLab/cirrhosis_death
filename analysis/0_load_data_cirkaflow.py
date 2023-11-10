@@ -26,10 +26,10 @@ import numpy as np
 import seaborn as sns
 
 from lifelines import KaplanMeierFitter
+from IPython.display import display
 
 import njab.plotting
 from njab.plotting import savefig
-import src
 
 import config
 
@@ -224,13 +224,13 @@ clinic.sample(3)
 
 # %%
 # clinic[config.clinic_data.vars_binary]
-vars_binary = src.pandas.get_overlapping_columns(clinic,
-                                                 config.clinic_data.vars_binary)
+vars_binary = njab.pandas.get_overlapping_columns(clinic,
+                                                  config.clinic_data.vars_binary)
 clinic[vars_binary].sample(5)
 
 # %%
-vars_cont = src.pandas.get_overlapping_columns(clinic,
-                                               config.clinic_data.vars_cont)
+vars_cont = njab.pandas.get_overlapping_columns(clinic,
+                                                config.clinic_data.vars_cont)
 clinic[vars_cont].sample(5)
 
 # %%
@@ -241,8 +241,9 @@ clinic.loc[:, clinic.dtypes == 'object'].sample(5)
 
 # %%
 clinic[
-    "cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH, 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri"].value_counts(
-    )
+    "cirrose ætiologi. Alkohol = 1, 2 = HCV, 3 = cryptogen, 4= NASH,"
+    " 5= anit1-trypsin mangel, 6 hæmokromatose, 7=autoimmun og PBC, 8=HBV, 9 kutan porfyri"].value_counts(
+)
 
 # %% [markdown]
 # Drop duplicate columns
@@ -287,9 +288,9 @@ din_a4 = (8.27 * 2, 11.69 * 2)
 njab.plotting.make_large_descriptors(32)
 
 fig, ax = plt.subplots(figsize=din_a4)
-src.plotting.plot_lifelines(clinic.sort_values('DateInflSample'),
-                            start_col='DateInflSample',
-                            ax=ax)
+njab.plotting.plot_lifelines(clinic.sort_values('DateInflSample'),
+                             start_col='DateInflSample',
+                             ax=ax)
 _ = plt.xticks(rotation=45)
 ax.invert_yaxis()
 njab.plotting.set_font_sizes('x-small')
@@ -354,8 +355,8 @@ _ = ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-            'k-',
-            lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -365,8 +366,8 @@ ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-        'k-',
-        lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -376,8 +377,8 @@ ax.plot([min_date, max_date], [
     min_date + datetime.timedelta(days=delta),
     max_date + datetime.timedelta(days=delta)
 ],
-        'k-',
-        lw=1)
+    'k-',
+    lw=1)
 _ = ax.annotate(f'+ {delta} days',
                 [min_date, min_date + datetime.timedelta(days=delta + 20)],
                 fontsize=fontsize,
@@ -512,7 +513,7 @@ clinic["DaysToDeathFromInfl"] = (
     clinic["DateDeath"].fillna(config.STUDY_ENDDATE) -
     clinic["DateInflSample"]).dt.days
 
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 
 cols_view = [
     cols_clinic.DaysToDeathFromInfl,
@@ -542,7 +543,7 @@ X_LIMIT = config.MAX_DAYS_INTERVAL
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(  #title='Kaplan Meier survival curve since inclusion',
+ax = kmf.plot(  # title='Kaplan Meier survival curve since inclusion',
     xlim=(0, X_LIMIT),
     ylim=y_lim,
     xlabel='Days since inflammation sample',
@@ -595,7 +596,7 @@ kmf.fit(clinic.loc[mask, "DaysToAdmFromInflSample"],
 
 fig, ax = plt.subplots()
 y_lim = (0, 1)
-ax = kmf.plot(  #title='Kaplan Meier curve for liver related admissions',
+ax = kmf.plot(  # title='Kaplan Meier curve for liver related admissions',
     xlim=(0, 180),
     ylim=(0, 1),
     xlabel='Days since inflammation sample',
@@ -655,7 +656,7 @@ clinic.loc[to_exclude]
 # %%
 for col_adm, col_death in zip(
     ['Adm180', 'Adm90', 'LiverAdm90', 'LiverAdm180'],
-    ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
+        ['dead180infl', 'dead090infl', 'dead090infl', 'dead180infl']):
     # to_exclude = clinic[col_adm].isna() & targets[col_death] == True
     to_exclude = clinic["isNA|MORS"]
     # clinic.loc[~to_exclude, col_adm] = clinic.loc[~to_exclude, col_adm].fillna(0)
@@ -672,7 +673,7 @@ targets = targets.sort_index(axis=1, ascending=False)
 targets.describe()
 
 # %%
-src.pandas.combine_value_counts(targets)
+njab.pandas.combine_value_counts(targets)
 
 
 # %% [markdown]
@@ -736,7 +737,8 @@ clinic[cols_cat].describe()
 
 # %% [markdown]
 # The martial status was made into three dummy variables before (see above):
-# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship, MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
+# `MaritalStatus_Divorced, MaritalStatus_Married, MaritalStatus_Relationship,
+#  MaritalStatus_Separated, MaritalStatus_Unmarried, MaritalStatus_Widow/widower`
 
 # %%
 mask = clinic.dtypes == 'object'
@@ -764,4 +766,4 @@ files_out[config.fname_pkl_cirkaflow_clinic_num.
 clinic[numeric_cols].to_pickle(config.fname_pkl_cirkaflow_clinic_num)
 
 # %%
-src.io.print_files(files_out)
+njab.io.print_files(files_out)

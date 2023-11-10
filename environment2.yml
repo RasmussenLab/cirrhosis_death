@@ -1,26 +1,26 @@
-# Environment with development packages (default, as unrestricted as possible)
+# Environment with additional packages pinned
 name: cirrhosis_death
 channels:
   - bioconda
   - conda-forge
   - defaults
 dependencies:
-  - python
+  - python=3.10
   - numpy<1.23
   - pandas<2 # some pandas function will need to be updated
   - ydata-profiling
-  - sweetviz
+  - sweetviz=2.2
   - scipy
   # plotting
   - matplotlib<3.7
   - plotly
   - seaborn
-  - umap-learn
+  - umap-learn=0.5
   # - graphviz
   - python-graphviz
   # ML, stats
-  - scikit-learn
-  - pingouin
+  - scikit-learn=1.3
+  - pingouin=0.5
   # other
   - tqdm # progress bars
   - xmltodict # configs
@@ -41,8 +41,8 @@ dependencies:
   - jupyter-dash
   - papermill # execute ipynb's
   # survival analysis
-  - lifelines
-  - statsmodels
+  - lifelines=0.27
+  - statsmodels=0.13
   # dev
   - pytest
   - pytest-cov
@@ -50,7 +50,7 @@ dependencies:
   - yapf # code formatting
   - pip
   - pip:
-      - mrmr_selection
+      - mrmr_selection==0.2.8
       - njab==0.0.3
       - heatmapz==0.0.4
       - pretty-jupyter

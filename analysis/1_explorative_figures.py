@@ -18,8 +18,7 @@
 # %%
 import pandas as pd
 
-import njab
-import src
+import njab  # set formatting # noqa: F811
 
 import config
 
@@ -53,8 +52,8 @@ bins = range(int(clinic[col].min()), int(clinic[col].max() + 1), 3)
 
 ax = clinic_prodoc[col].rename(config.TRAIN_LABEL).hist(alpha=0.9, legend=True, bins=bins)
 ax = clinic_cflow[col].rename(config.TEST_LABEL).hist(alpha=0.7,
-                                                legend=True,
-                                                bins=bins)
+                                                      legend=True,
+                                                      bins=bins)
 _ = ax.set_xlabel(col)
 _ = ax.set_ylabel('n observations')
 _ = ax.set_xticks(list(bins))
@@ -65,13 +64,13 @@ njab.plotting.savefig(fig=ax.get_figure(), name=fname)
 
 # %%
 ax = clinic_prodoc[col].rename(config.TRAIN_LABEL).hist(alpha=0.9,
-                                              legend=True,
-                                              density=1,
-                                              bins=bins)
+                                                        legend=True,
+                                                        density=1,
+                                                        bins=bins)
 ax = clinic_cflow[col].rename(config.TEST_LABEL).hist(alpha=0.7,
-                                                legend=True,
-                                                density=1,
-                                                bins=bins)
+                                                      legend=True,
+                                                      density=1,
+                                                      bins=bins)
 _ = ax.set_xlabel(col)
 _ = ax.set_ylabel('proportion')
 _ = ax.set_xticks(list(bins))
@@ -81,6 +80,6 @@ files_out[fname.name] = fname
 njab.plotting.savefig(fig=ax.get_figure(), name=fname)
 
 # %%
-src.io.print_files(files_out)
+njab.io.print_files(files_out)
 
 # %%

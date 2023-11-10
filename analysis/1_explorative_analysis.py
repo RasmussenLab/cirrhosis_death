@@ -31,8 +31,8 @@ from lifelines.plotting import add_at_risk_counts
 import matplotlib.pyplot as plt
 import seaborn
 
-import src
-from src.plotting.km import compare_km_curves, log_rank_test
+from IPython.display import display
+from njab.plotting.km import compare_km_curves, log_rank_test
 import njab.plotting
 from njab.sklearn import run_pca, StandardScaler
 
@@ -49,9 +49,12 @@ CLINIC = config.fname_pkl_prodoc_clinic
 OLINK = config.fname_pkl_prodoc_olink
 val_ids: str = ''  # List of comma separated values or filepath
 #
-clinic_cont = config.clinic_data.vars_cont  # list or string of csv, eg. "var1,var2"
-clinic_binary = config.clinic_data.vars_binary  # list or string of csv, eg. "var1,var2"
-da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol'  # List of comma separated values or filepath
+# list or string of csv, eg. "var1,var2"
+clinic_cont = config.clinic_data.vars_cont
+# list or string of csv, eg. "var1,var2"
+clinic_binary = config.clinic_data.vars_binary
+# List of comma separated values or filepath
+da_covar = 'Sex,Age,Cancer,Depression,Psychiatric,Diabetes,HeartDiseaseTotal,Hypertension,HighCholesterol'
 
 # %%
 # TARGET = 'dead180infl'
@@ -74,14 +77,14 @@ FOLDER
 
 # %%
 clinic = pd.read_pickle(CLINIC)
-cols_clinic = src.pandas.get_colums_accessor(clinic)
+cols_clinic = njab.pandas.get_colums_accessor(clinic)
 olink = pd.read_pickle(OLINK)
 
 # %%
 # pd.crosstab(clinic.DiagnosisPlace, clinic[TARGET], margins=True)
 
 # %%
-check_isin_clinic = partial(src.pandas.col_isin_df, df=clinic)
+check_isin_clinic = partial(njab.pandas.col_isin_df, df=clinic)
 covar = check_isin_clinic(da_covar)
 covar
 
@@ -260,7 +263,14 @@ writer.close()
 
 # %% [markdown]
 # # KM plot for top marker
-# Direction of cutoff cannot be directly inferred from cutoff
+# Cutoff is defined using a univariate logistic regression
+#
+#
+# $$ ln \frac{p}{1-p} = \beta_0 + \beta_1 \cdot x $$
+# the default cutoff `p=0.5` corresponds to a feature value of:
+# $$ x = - \frac{\beta_0}{\beta_1} $$
+#
+# Optional: The cutoff could be adapted to the prevalence of the target.
 
 # %%
 rejected = ana_diff_olink.query("`('ancova', 'rejected')` == True")
@@ -281,7 +291,7 @@ log_rank_test = partial(
     time=time_km,
     y=y_km,
 )
-TOP_N = None # None = all
+TOP_N = None  # None = all
 # %%
 for marker in rejected.index[:TOP_N]:  # first case done above currently
     fig, ax = plt.subplots()
@@ -289,7 +299,8 @@ for marker in rejected.index[:TOP_N]:  # first case done above currently
     # class_weight=None
     model = sklearn.linear_model.LogisticRegression(class_weight=class_weight)
     model = model.fit(X=olink[marker].to_frame(), y=happend)
-    print(f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
+    print(
+        f"Intercept {float(model.intercept_):5.3f}, coef.: {float(model.coef_):5.3f}")
     cutoff = -float(model.intercept_) / float(model.coef_)
     direction = '>' if model.coef_ > 0 else '<'
     print(
@@ -299,7 +310,8 @@ for marker in rejected.index[:TOP_N]:  # first case done above currently
     ax, kmf_0, kmf_1 = compare_km_curves(pred=pred)
     res = log_rank_test(mask=pred)
     ax.set_title(
-        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker} \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
+        f'KM curve for target {config.TARGET_LABELS[TARGET].lower()} and Olink marker {marker}'
+        f' \n(cutoff{direction}{cutoff:.2f}, log-rank-test p={res.p_value:.3f})'
     )
     ax.legend([
         f"KP pred=0 (N={(~pred).sum()})", '95% CI (pred=0)',
@@ -361,9 +373,10 @@ fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PCs_distribution')
 
 # %%
-ax = seaborn.scatterplot(x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
+ax = seaborn.scatterplot(
+    x=PCs.iloc[:, 0], y=PCs.iloc[:, 1], hue=clinic[TARGET])
 fig = ax.get_figure()
 njab.plotting.savefig(fig, name=FOLDER / '1_PC1_vs_PC2.pdf')
 
 # %%
-#umap
+# umap
