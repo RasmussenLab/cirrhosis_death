@@ -186,9 +186,9 @@ rule profile_data:
         title_clinic="{cohort} - Clinical data",
         title_olink="{cohort} - Olink data",
     shell:
-        "pandas_profiling {input.clinic} {output.profiling_report_clinic} -m"
+        "ydata_profiling {input.clinic} {output.profiling_report_clinic} -m"
         "    --title {params.title_clinic:q}"
-        " && pandas_profiling {input.olink} {output.profiling_report_olink} -m"
+        " && ydata_profiling {input.olink} {output.profiling_report_olink} -m"
         "    --title {params.title_olink:q}"
 
 
