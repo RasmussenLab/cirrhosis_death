@@ -2,8 +2,10 @@
 
 This repository contains the code for the analysis presented in the paper:
 
-> Kronborg, Webel, et.al (2023): Markers of inflammation predict survival in newly diagnosed cirrhosis: a prospective registry study  
-> In Review, coming soon
+> Mynster Kronborg, T., Webel, H., O’Connell, M. B., Danielsen, K. V., Hobolth, L., Møller, S., Jensen, R. T., Bendtsen, F., Hansen, T., Rasmussen, S., Juel, H. B., & Kimer, N. (2023).  
+> Markers of inflammation predict survival in newly diagnosed cirrhosis: a prospective registry study.  
+> Scientific Reports, 13(1), 1–11.  
+> https://www.nature.com/articles/s41598-023-47384-2
 
 The core functionaly used is available through the python package njab, which can be installed from PyPI: [pypi.org/project/njab](https://pypi.org/project/njab/)
 
