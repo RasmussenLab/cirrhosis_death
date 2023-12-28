@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -41,13 +41,17 @@ from njab.sklearn import pca as njab_pca
 from njab.sklearn.scoring import ConfusionMatrix
 from njab.sklearn.types import Splits
 from njab.plotting.metrics import plot_auc, plot_prc
-from njab.sklearn.scoring import get_score, get_pred, get_target_count_per_bin
-
-
+from njab.sklearn.scoring import (get_score,
+                                  get_pred,
+                                  get_target_count_per_bin,
+                                  get_lr_multiplicative_decomposition)
 import config
 
 logger = logging.getLogger('njab')
 logger.setLevel(logging.INFO)
+
+# adapt fond size:
+# njab.plotting.set_font_sizes(7)
 
 # %% [markdown]
 # ## Set parameters
@@ -452,7 +456,9 @@ des_selected_feat
 # %%
 fig = plt.figure(figsize=(6, 6))
 files_out['corr_plot_train.pdf'] = FOLDER / 'corr_plot_train.pdf'
-_ = corrplot(X[results_model.selected_features].join(y).corr(), size_scale=300)
+heatmap_corr = X[results_model.selected_features].join(y).corr()
+heatmap_corr.to_excel(writer, 'sel_feat_corr', float_format='%.3f')
+_ = corrplot(heatmap_corr, size_scale=300)
 njab.plotting.savefig(fig, files_out['corr_plot_train.pdf'])
 
 # %% [markdown]
@@ -602,27 +608,15 @@ njab.plotting.savefig(ax.get_figure(), fname)
 # # Multiplicative decompositon
 # logarithmic transformation of the linear model
 # $$ \ln\left(\frac{p}{1-p} \right) = \beta_0 + \beta_1 x_1 + \dots + \beta_M x_M $$
-# Score in terms of multiplicative compentents (which is dumped to excel)
-# $$ \frac{p}{1-p} = \exp(\beta_0) \cdot \exp(\beta_1 x_1) * \dots * \exp(\beta_M x_M) = score $$
-# Going from score to probability:
-# $$ p = \frac{score}{1+score} $$
+# Odds in terms of multiplicative compentents (which is dumped to excel)
+# $$ \frac{p}{1-p} = \exp(\beta_0) \cdot \exp(\beta_1 x_1) * \dots * \exp(\beta_M x_M) = odds $$
+# Going from odds to probability:
+# $$ p = \frac{odds}{1+odds} $$
 
 # %%
-
-
-def get_lr_multiplicative_decomposition(results, X, score, y):
-    components = X[results.selected_features].multiply(results.model.coef_)
-    components['intercept'] = float(results.model.intercept_)
-    components = np.exp(components)
-    components['score'] = score
-    components[TARGET] = y
-    components = components.sort_values('score', ascending=False)
-    return components
-
-
 components = get_lr_multiplicative_decomposition(results=results_model,
                                                  X=splits.X_train,
-                                                 score=score,
+                                                 prob=score,
                                                  y=y)
 components.to_excel(writer, 'decomp_multiplicative_train')
 components.to_excel(writer,
@@ -633,7 +627,7 @@ components.head(10)
 # %%
 components_test = get_lr_multiplicative_decomposition(results=results_model,
                                                       X=splits.X_test,
-                                                      score=score_val,
+                                                      prob=score_val,
                                                       y=y_val)
 components_test.to_excel(writer, 'decomp_multiplicative_test')
 components_test.to_excel(writer,
@@ -849,7 +843,7 @@ if M_sel > 1:
 if M_sel > 1:
     max_rows = min(3, len(results_model.selected_features))
     fig, axes = plt.subplots(max_rows, 2,
-                             figsize=(8.3, 11.7),
+                             figsize=(6, 9),
                              sharex=False,
                              sharey=False,
                              layout='constrained')
@@ -866,9 +860,12 @@ if M_sel > 1:
                 x=_embedding.iloc[:, i],
                 y=_embedding.iloc[:, j],
                 hue=_model_pred_label,
+                s=12,
                 hue_order=['TN', 'TP', 'FN', 'FP'],
                 palette=[colors[0], colors[2], colors[1], colors[3]],
                 ax=axes[_row, axes_col])
+            # ! manipulate legend globally?
+            # ax.legend(title='label', fontsize=7, title_fontsize=8)
             # ! scale each row and each column
             # X_scaled[results_model.selected_features][i]
             # X_val_scaled[results_model.selected_features][j]
